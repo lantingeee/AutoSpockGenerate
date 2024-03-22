@@ -1911,8 +1911,8 @@ import static ${macro.matcherCanonicalName}.eq;
                             #set($param.props.shouldUseEqMatcher = true)
                         #end
                     #else
-                        #set($param.initExpression = "_")
-                        #set($param.defaultInitExpression = "_")
+                        #set($param.initExpression = "_ as ${param.type.canonicalNameOrName}")
+                        #set($param.defaultInitExpression = "_ as ${param.type.canonicalNameOrName}.")
                     #end
                 #end
             #end
