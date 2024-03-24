@@ -52,6 +52,7 @@ import static org.testng.Assert.assertFalse;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import qunar.tc.qmq.base.BaseMessage
 #if($hasAssertThrows)
 import static org.testng.Assert.assertThrows;
 #end
@@ -916,8 +917,11 @@ void test${StringUtils.capitalize(${method.name})}${method.overloadSuffix}() {
             #end
         #end
         #set($macro.returnTypeExpression = "#if($di.method.returnType.shouldStoreInReference)$di.method.returnType.testClassLocalFieldName#else $di.method.returnType.initExpression #end")
-        $macro.qualifier.#methodCall($di.method, false) >> $macro.returnTypeExpression
-
+        #if($di.method.returnType.canonicalName == 'qunar.tc.qmq.Message')
+            $macro.qualifier.#methodCall($di.method, false) >> new BaseMessage()
+        #else
+            $macro.qualifier.#methodCall($di.method, false) >> $macro.returnTypeExpression
+        #end
         #if($macro.shouldRenderComment) $Newline #end
     #end
 #end
