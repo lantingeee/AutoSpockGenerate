@@ -310,13 +310,18 @@ def setup() {
         #if($macro.shouldStoreExpectedValue)
             #declareAndInitLocalVar($testInfo.method.returnType, true)
         #end
-
-    when:
-        #renderStubs($testInfo)
-        #renderMockStatements($testInfo)
+        #if($generateStubsAndVerifyStatements && $testInfo.mockedDIs.size()>1)
+        when:
+            #renderStubs($testInfo)
+            #renderMockStatements($testInfo)
+        #end
 
     // Run the test
-    then:
+        #if($generateStubsAndVerifyStatements&& $testInfo.mockedDIs.size()>1)
+            then:
+        #else
+            expect:
+        #end
         #set($macro.qualifier = "#if($testInfo.method.static)${method.containingClass.canonicalNameOrName}#elseif($shouldCreateSourceClassInEachTestMethod)${sourceClass.testClassLocalFieldName}#else${sourceClass.testClassMemberName}#end")
         #if($testInfo.expectedException)
             #if($hasAssertThrows)
