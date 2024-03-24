@@ -279,8 +279,8 @@ def setup() {
     #else
         ## Determine if we should create an assertEquals(...) call.
         #set($macro.returnTypeIsArrayWithComparableType = $testInfo.method.returnType.array && ($testInfo.method.returnType.deepArrayComponentType.primitive || $testInfo.method.returnType.deepArrayComponentType.overridesEquals))
-        #set($macro.shouldCreateAssertEqualsCall =
-            $testInfo.method.returnType && ($testInfo.method.returnType.primitive || $testInfo.method.returnType.overridesEquals || $testInfo.method.returnType.array || $testInfo.expectedValueNull)
+        #set($macro.AssertEqualsCall = true)
+        #set($macro.shouldCreateAssertEqualsCall = $testInfo.method.returnType && ($testInfo.method.returnType.primitive || $testInfo.method.returnType.overridesEquals || $testInfo.method.returnType.array || $testInfo.expectedValueNull)
         && ($testInfo.method.returnType.classT || $testInfo.method.returnType.allNestedTypeParamsOverrideEquals || $testInfo.expectedValueEmpty || $testInfo.expectedValueAbsent || $macro.returnTypeIsArrayWithComparableType)
         && !$testInfo.expectedException)
         #set($macro.shouldStoreExpectedValue = $macro.shouldCreateAssertEqualsCall && !$testInfo.method.returnType.simple && !$testInfo.expectedValueEmpty && !$testInfo.expectedValueAbsent)
@@ -326,10 +326,10 @@ def setup() {
                 ${macro.qualifier}.#methodCall($testInfo.method, false);
             #end
         #else
-            #if($testInfo.method.returnType) def result = #end
-            ${macro.qualifier}.#methodCall($testInfo.method, false);
+##            #if($testInfo.method.returnType)  #end
+        def result = ${macro.qualifier}.#methodCall($testInfo.method, false);
         // Verify the results
-            #if($macro.shouldCreateAssertEqualsCall)
+            #if($macro.AssertEqualsCall)
                 #if($testInfo.expectedValueNull)
                 assertNull(result);
                 #elseif($testInfo.expectedValueTrue)
@@ -394,10 +394,12 @@ def $testInfo.method.returnType.testClassLocalFieldName = ${sourceClass.canonica
     #set($macro.shouldRenderSetup = $macro.paramsToStoreInFields.size() > 0 || ($testInfo.method.returnType && !$testInfo.expectedException))
     #determineTestCaseSuffix($testInfo)
     #set($macro.returnTypeIsArrayWithComparableType = $testInfo.method.returnType.array && ($testInfo.method.returnType.deepArrayComponentType.primitive || $testInfo.method.returnType.deepArrayComponentType.overridesEquals))
+    ## 任意类型 都必须有 assert 语法
+    #set($macro.AssertEqualsCall = true)
     #set($macro.shouldCreateAssertEqualsCall =
-    !$macro.multipleValuesTest && $testInfo.method.returnType && ($testInfo.method.returnType.primitive || $testInfo.method.returnType.overridesEquals || $testInfo.method.returnType.array)
-    && ($testInfo.method.returnType.classT || $testInfo.method.returnType.allNestedTypeParamsOverrideEquals || $macro.returnTypeIsArrayWithComparableType)
-    && !$testInfo.expectedException)
+   !$macro.multipleValuesTest && $testInfo.method.returnType && ($testInfo.method.returnType.primitive || $testInfo.method.returnType.overridesEquals || $testInfo.method.returnType.array)
+   && ($testInfo.method.returnType.classT || $testInfo.method.returnType.allNestedTypeParamsOverrideEquals || $macro.returnTypeIsArrayWithComparableType)
+   && !$testInfo.expectedException)
     #set($macro.shouldStoreExpectedValue = $macro.shouldCreateAssertEqualsCall && !$testInfo.method.returnType.simple)
     #set($macro.shouldRenderExceptionHeader = $testInfo.expectedException && !$hasAssertThrows)
     #set($macro.shouldRenderSimpleMultivalueTest = $macro.multipleValuesTest && ($testInfo.method.returnType || $testInfo.expectedException))
@@ -439,10 +441,9 @@ then:
     #else
         #if($testInfo.method.returnType && !$testInfo.expectedException) def result = #end ${macro.qualifier}.#methodCall($testInfo.method, false);
     #end
+// Verify the results
     #if(!$testInfo.expectedException)
-
-    // Verify the results
-        #if($macro.shouldCreateAssertEqualsCall)
+        #if($macro.AssertEqualsCall)
             #set($macro.expectedValueExpression = "#if($macro.shouldStoreExpectedValue)$testInfo.method.returnType.testClassLocalFieldName #else $testInfo.method.returnType.initExpression #end")
             #assertEqualsCall($macro.expectedValueExpression, 'result', $testInfo.method.returnType);
         #end
@@ -716,6 +717,8 @@ void ${macro.testName}() {
             #set($macro.expectedValueRef = ${macro.qualifier} + '.' + ${method.targetField.declaredName})
         #end
     #end
+    ## 任意类型 都必须有 assert 语法
+    #set($macro.AssertEqualsCall = true)
     #set($macro.shouldCreateAssertEqualsCall = $macro.expectedValueRef || $macro.shouldStoreExpectedValue)
     #set($macro.shouldStoreActualValue = !$macro.shouldCreateAssertEqualsCall)
 @Test
@@ -731,7 +734,7 @@ void test${StringUtils.capitalize(${method.name})}${method.overloadSuffix}() {
     #if($macro.shouldStoreActualValue)
     def result = $macro.getterCallExpression;
     #end
-    #if($macro.shouldCreateAssertEqualsCall)
+    #if($macro.AssertEqualsCall)
         #assertEqualsCall($macro.expectedValueRef, $macro.getterCallExpression, $method.returnType);
     #end
 }
@@ -837,7 +840,8 @@ void test${StringUtils.capitalize(${method.name})}${method.overloadSuffix}() {
 ## Param: $type - the Type of the arguments; this is used to determine which assertEquals method to call.
 ##----------------------------------------------------------------------------------------------------------------------
 #macro(assertEqualsCall $expected, $actual, $type)
-    #if($StringUtils.equalsAny($type.canonicalName, 'double', 'java.lang.Double')) assertEquals($expected, $actual, 0.0001d) #break
+    #if(!$type) Assert.assertNull($actual) #break
+    #elseif($StringUtils.equalsAny($type.canonicalName, 'double', 'java.lang.Double')) assertEquals($expected, $actual, 0.0001d) #break
     #elseif($StringUtils.equalsAny($type.canonicalName, 'float', 'java.lang.Float')) assertEquals($expected, $actual, 0.0001f) #break
     #elseif($StringUtils.equalsAny($type.canonicalName, 'boolean', 'java.lang.Boolean')) assertFalse($actual) #break
     #else Assert.assertNotNull($expected) #end
