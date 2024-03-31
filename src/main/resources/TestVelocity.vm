@@ -1,0 +1,123 @@
+
+## Customize the name of the member and local field (if needed) used to store the instance of the source class.
+#set($sourceClass.testClassMemberName = "${sourceClass.testClassMemberName}")
+## Configure how Bean DTOs are initialized.
+#set($minNumberOfSettersToCall = 5)
+#set($maxNumberOfSettersToCall = 70)
+#set($useStaticImportForInitMocks = true)
+## Set this to use mocks for mockable method parameters that end in "listener" or "callback" ignoring case.
+#set($useMocksForListenerAndCallbackParameters = true)
+#set($generateStubsAndVerifyStatements = true)
+## Use this to specify custom initialization values for dependencies and method parameters of certain types;
+## See https://squaretest.com#template_api_quick_settings for details.
+#set($initExpressionOverrides = {})
+##----------------------------------------------------------------------------------------------------------------------
+
+## Initialize the data model. This sets global variables based on the architype of the source class and Quick Settings.
+## See the comments above the macro or https://squaretest.com#template_api_initializeTemplateDataModel for details.
+
+## Render the package declaration.
+#if($StringUtils.isNotEmpty($sourceClass.packageName))
+package $sourceClass.packageName;
+#end
+
+## Render the imports.
+#foreach($importLine in $importLinesRequired)
+    $importLine
+#end
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import qunar.tc.qmq.base.BaseMessage;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.mockito.InjectMocks;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import spock.lang.Subject;
+import com.blogspot.toomuchcoding.spock.subjcollabs.Collaborator;
+import spock.lang.Specification
+import spock.lang.Unroll
+
+## Render the test class.
+class ${sourceClass.name}Test extends Specification {
+
+## Declare member fields for the mocked dependencies.
+#memberDecarations($mockMembers)
+
+## Declare a member field for the instance of the source class.
+@Subject
+public ${sourceClass.type.canonicalText} ${sourceClass.testClassMemberName};
+
+##    生成初始化代码
+def setup() {
+    #set($_ = $CodeStyleUtils.beginMethodScope())
+    #if(!$mockMembers.empty)
+        ${sourceClass.testClassMemberName} = new ${sourceClass.type.canonicalText}(
+        #foreach($param in $mockMembers)
+            $param.testClassMemberName: $param.testClassMemberName#if($foreach.hasNext),#end
+        #end)
+    #end
+    #set($_ = $CodeStyleUtils.endMethodScope())
+}
+
+#generateAllTestCode($testInfos)
+}
+
+#macro(memberDecarations $params)
+    #foreach($param in $params)
+    @Collaborator
+    private $param.type.canonicalText $param.testClassMemberName = Mock();
+    #end
+#end
+
+#macro(generateAllTestCode $testInfos)
+    #foreach($method in $testInfos)
+        #generateTestMethod($method)
+    #end
+#end
+
+
+#macro(generateTestMethod $testInfo)
+    #set($_ = $CodeStyleUtils.beginMethodScope())
+    @Test
+    void test${StringUtils.capitalize(${testInfo.method.name})}() {
+    // Setup
+    given:
+        ## Construct the source class if needed.
+    ## TODO: 初始化方法，并且构造 可变入参
+
+        #if($testInfo.mockedDIs.size()>1)
+        when:
+            #renderStubs($testInfo)
+        #end
+
+    // Run the test
+        #if($testInfo.mockedDIs.size()>1) then: #else expect: #end
+    ## TODO: invoke method
+        #set($macro.qualifier = "#if($testInfo.method.static)
+                                    ${method.containingClass.canonicalNameOrName}
+                                #else
+                                    ${sourceClass.testClassMemberName}
+                                #end")
+        def result = ${macro.qualifier}.#methodCall($testInfo.method, false);
+        // Verify the results
+        #if($testInfo.expectedValueNull)
+        assertNull(result);
+        #elseif($testInfo.expectedValueTrue)
+        assertTrue(result);
+        #end
+    #set($_ = $CodeStyleUtils.endMethodScope())
+#end
+
+
+

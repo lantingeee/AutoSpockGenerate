@@ -3,7 +3,7 @@
 ## Note that the template code below will ignore any prefix set to "" and use your IDE code style settings instead.
 #set($dependencyMemberNamePrefix = "")
 #set($mockDependencyMemberNamePrefix = "")
-## Set this to use a special prefix for local fields containing arguments for test methods.
+## Set this to use a special prefix for local fields containing arguments for test testInfos.
 #set($parameterLocalFieldNamePrefix = "")
 #set($mockParameterLocalFieldNamePrefix = "")
 ## Customize the name of the member and local field (if needed) used to store the instance of the source class.
@@ -116,7 +116,7 @@ def setup() {
 ##        }
 ##    #end
 
-## Render the test methods.
+## Render the test testInfos.
 #renderTestMethods($methodsToTest)
 }
 
@@ -133,13 +133,13 @@ def setup() {
 #end
 
 ##----------------------------------------------------------------------------------------------------------------------
-## renderTestMethods($methods)
-## Renders tests for the given List<Method>. This filters out getters/setters and other methods for which tests should
+## renderTestMethods($testInfos)
+## Renders tests for the given List<Method>. This filters out getters/setters and other testInfos for which tests should
 ## not be rendered.
-## Param: $methods - the list of methods for which to render tests.
+## Param: $testInfos - the list of testInfos for which to render tests.
 ##----------------------------------------------------------------------------------------------------------------------
-#macro(renderTestMethods $methods)
-    #foreach($method in $methods)
+#macro(renderTestMethods $testInfos)
+    #foreach($method in $testInfos)
         #if($method.doesNothing)
             #renderDoNothingTest($method)
         #elseif(($method.getter || $method.setter) && !$sourceClass.enum)
@@ -354,7 +354,7 @@ def setup() {
 ##----------------------------------------------------------------------------------------------------------------------
 ## renderStaticCreatorMethodPrimaryFlowTest($testInfo)
 ## Renders the primary flow test case for the given static method that returns an instance of the SourceClass.
-## This test case calls methods on the returned source class to ensure it was created properly by the static method.
+## This test case calls testInfos on the returned source class to ensure it was created properly by the static method.
 ## Param: $testInfo - information about which case this test should cover.
 ##----------------------------------------------------------------------------------------------------------------------
 #macro(renderStaticCreatorMethodPrimaryFlowTest $testInfo)
@@ -1155,7 +1155,7 @@ def callable = (Callable<?>) invocation.getArguments()[$macro.indexOfCallable];
             #set($param.shouldStoreInReference = true)
         #end
     #end
-    #set($macro.returnTypeExpression = "#if($macro.shouldStoreInReference)$di.method.returnType.testClassLocalFieldName#else $di.method.returnType.emptyInitExpression #end")
+    #set($macro.returnTypeExpression = "#if($macro.shouldStoreInReference)$di.method.returnType.testClassLocalFieldNamae#else $di.method.returnType.emptyInitExpression #end")
     $macro.qualifier.#methodCall($di.method, false) >> $macro.returnTypeExpression
     #if($macro.shouldRenderComment) $Newline #end
 #end
@@ -1618,13 +1618,13 @@ import static ${macro.matcherCanonicalName}.eq;
 ##   $hasReflectionTestUtils        boolean indicating whether Spring ReflectionTestUtils is on the test classpath.
 ##   $hasAssertThrows               boolean indicating whether Assert.assertThrows(..) is on the test classpath.
 ##                                  This is available in JUnit 4.13 and higher.
-##   $methodsToTest                 FluentList<Method> containing the methods that should be tested.
+##   $methodsToTest                 FluentList<Method> containing the testInfos that should be tested.
 ##
 ##   Variables Used In Source Class Initialization:
 ##   $shouldCreateSourceClassInEachTestMethod boolean indicating whether the source class should be constructed in each
 ##                                  test method as opposed to the setup(..) method.
 ##   $sourceClassConstructor        The constructor that should be used to construct the source class.
-##   $setterMethodsToCall           The setter methods that should be used to initialize the source class.
+##   $setterMethodsToCall           The setter testInfos that should be used to initialize the source class.
 ##   $packageLocalFieldsToSet       The package local fields that should be set to initialize the source class.
 ##   $packageLocalFieldsWithInlineMocks subset of $packageLocalFieldsToSet that contains package local fields that are
 ##                                  set to inline mocks.
@@ -1645,14 +1645,14 @@ import static ${macro.matcherCanonicalName}.eq;
     #set($hasOpenMocksMethod = false)
     #set($initMocksMethodName = 'initMocks')
     #set($macro.mockitoAnnotationsSourceClass = $ClassUtils.resolveClass('org.mockito.MockitoAnnotations'))
-    #if($macro.mockitoAnnotationsSourceClass && $macro.mockitoAnnotationsSourceClass.methods.containsAnyWith('name', 'openMocks'))
+    #if($macro.mockitoAnnotationsSourceClass && $macro.mockitoAnnotationsSourceClass.testInfos.containsAnyWith('name', 'openMocks'))
         #set($hasOpenMocksMethod = true)
         #set($initMocksMethodName = 'openMocks')
     #end
     #set($hasReflectionTestUtils = $ClassUtils.isInTestClasspath('org.springframework.test.util.ReflectionTestUtils'))
     ## Determine if we have Assert.assertThrows(..).
     #set($macro.assertClass = $ClassUtils.resolveClass('org.testng.Assert'))
-    #if($macro.assertClass && $macro.assertClass.methods.containsAnyWith('name', 'assertThrows'))
+    #if($macro.assertClass && $macro.assertClass.testInfos.containsAnyWith('name', 'assertThrows'))
         #set($hasAssertThrows = true)
     #else
         #set($hasAssertThrows = false)
@@ -1677,12 +1677,12 @@ import static ${macro.matcherCanonicalName}.eq;
 
 ##----------------------------------------------------------------------------------------------------------------------
 ## determineDependenciesAndMethods()
-## Determines the source class dependencies and methods that can be tested.
+## Determines the source class dependencies and testInfos that can be tested.
 ## This macro sets the following variables.
 ##   $sourceClassConstructor the constructor to use to provide the dependencies to the source class.
 ##   $dependencies           the soruce class dependencies
 ##   $possibleDependencies   possible source class dependencies
-##   $methodsThatCanBeTested the methods in the source class and super classes that can be tested.
+##   $methodsThatCanBeTested the testInfos in the source class and super classes that can be tested.
 ##   $canCreateSourceClassInEachTestMethod boolean indicating whether we can construct the source class in each test
 ##                                         method.
 ##   $shouldCreateSourceClassInEachTestMethod boolean indicating whether we should construct the source class in each
@@ -1772,12 +1772,12 @@ import static ${macro.matcherCanonicalName}.eq;
     #elseif($sourceClass.singleton)
         #set($sourceClass.type.initExpression = $sourceClass.singletonAccessExpression)
     #end
-    ## Determine the methods that can be tested.
+    ## Determine the testInfos that can be tested.
     #foreach($method in $sourceClass.allNonObjectLowestOverrideMethods.filter('visibleToTestClass').filterOut('abstract'))
         #set($_ = $methodsThatCanBeTested.add($method))
     #end
-    ## Mark methods that we will test by default.
-    #set($macro.sourceClassHasAtLeastOneMethod = !$sourceClass.methods.filter('visibleToTestClass').filterOut('abstract').empty)
+    ## Mark testInfos that we will test by default.
+    #set($macro.sourceClassHasAtLeastOneMethod = !$sourceClass.testInfos.filter('visibleToTestClass').filterOut('abstract').empty)
     #foreach($method in $methodsThatCanBeTested)
         #if(($method.inMainSourceClass || !$macro.sourceClassHasAtLeastOneMethod) && !$method.getterOrSetter && $method.writable)
             #set($method.shouldTest = true)
@@ -1824,7 +1824,7 @@ import static ${macro.matcherCanonicalName}.eq;
                 #set($param.shouldStoreInReference = true)
                 #set($param.type.shouldBeMocked = false)
             #elseif(($param.type.generic && $sourceClass.packageVisibleStaticCreatorMethods.contains($method)) || $method.doesNothing)
-                ## Use inline args for generic types in static creator methods; e.g. Pair.of(left, right), ImmutableList.of(T...).
+                ## Use inline args for generic types in static creator testInfos; e.g. Pair.of(left, right), ImmutableList.of(T...).
                 #set($param.shouldStoreInReference = false)
             #elseif($useMocksForListenerAndCallbackParameters
             && $param.type.mockable
@@ -2138,7 +2138,7 @@ import static ${macro.matcherCanonicalName}.eq;
 ## askUserToConfirmSettingsIfNeeded(..) call.
 ## This macro sets the following variables.
 ##   $mockMembers                   contains dependencies that should be mocked and stored in test class members.
-##   $setterMethodsToCall           The setter methods that should be used to initialize the source class.
+##   $setterMethodsToCall           The setter testInfos that should be used to initialize the source class.
 ##   $packageLocalFieldsToSet       The package local fields that should be set to initialize the source class.
 ##   $packageLocalFieldsWithInlineMocks subset of $packageLocalFieldsToSet that contains package local fields that are
 ##                                  set to inline mocks.
@@ -2166,11 +2166,11 @@ import static ${macro.matcherCanonicalName}.eq;
     #set($shouldRenderSetupMethod = false)
     #set($shouldRenderTearDownMethod = false)
 
-    ## Select the methods to test.
+    ## Select the testInfos to test.
     #set($methodsToTest = $methodsThatCanBeTested.filter('shouldTest'))
     #set($methodsToTest = $ClassUtils.updateOverloadSuffixes($methodsToTest))
     #if($methodsToTest.filterOut('static').empty && !$methodsToTest.empty)
-        ## We are only testing static methods.
+        ## We are only testing static testInfos.
         #break($macro)
     #end
     #set($macro.isZeroArgConstructor = $sourceClassConstructor && $sourceClassConstructor.parameters.empty)
@@ -2282,7 +2282,7 @@ import static ${macro.matcherCanonicalName}.eq;
 #* @vtlvariable name="testInfo" type="com.squaretest.template.api.Api.TestInfo" *#
 #* @vtlvariable name="exceptionToThrow" type="com.squaretest.template.api.Api.Exception" *#
 #* @vtlvariable name="dependency" type="com.squaretest.template.api.Api.Variable" *#
-#* @vtlvariable name="methods" type="com.squaretest.template.api.Api.FluentList<com.squaretest.template.api.Api.Method>" *#
+#* @vtlvariable name="testInfos" type="com.squaretest.template.api.Api.FluentList<com.squaretest.template.api.Api.Method>" *#
 #* @vtlvariable name="method" type="com.squaretest.template.api.Api.Method" *#
 #* @vtlvariable name="param" type="com.squaretest.template.api.Api.Variable" *#
 #* @vtlvariable name="typeOrVariable" type="com.squaretest.template.api.Api.Variable" *#

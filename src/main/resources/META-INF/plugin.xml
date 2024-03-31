@@ -8,7 +8,7 @@
   <name>AutoSpockGenerate</name>
 
   <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-  <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+  <vendor email="lantingeee@gmail.com" url="https://www.yourcompany.com">YourCompany</vendor>
 
   <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
        Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
@@ -21,10 +21,51 @@
   <!-- Product and plugin compatibility requirements.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
   <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.java</depends>
 
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
-  <extensions defaultExtensionNs="com.intellij">
 
-  </extensions>
+  <idea-version since-build="232" />
+<!--  <depends config-file="squaretest-groovy.xml">org.intellij.groovy</depends>-->
+<!--  <depends optional="true" config-file="squaretest-yaml.xml">org.jetbrains.plugins.yaml</depends>-->
+<!--  <depends optional="true" config-file="squaretest-velocity.xml">com.intellij.velocity</depends>-->
+<!--  <extensions defaultExtensionNs="com.intellij">-->
+<!--    <applicationConfigurable groupId="root" displayName="Squaretest" id="preferences.SquaretestSettings" instance="com.squaretest.settings.SettingsConfigurable" />-->
+<!--    <applicationService serviceInterface="com.squaretest.settings.store.SettingsState" serviceImplementation="com.squaretest.settings.store.SettingsState" />-->
+<!--    <applicationService serviceInterface="com.squaretest.settings.store.license.LicenseSettingsState" serviceImplementation="com.squaretest.settings.store.license.LicenseSettingsState" />-->
+<!--    <applicationService serviceInterface="com.squaretest.settings.store.vm.VmCache" serviceImplementation="com.squaretest.settings.store.vm.VmCache" />-->
+<!--    <completion.contributor language="JAVA" implementationClass="com.squaretest.completion.JavaCompletionContributor" />-->
+<!--    <postStartupActivity implementation="com.squaretest.startup.SquaretestProjectComponent" />-->
+<!--  </extensions>-->
+  <actions>
+    <group id="AutoGenTestGroup" text="AutoGenTest" description="AutoGenTest actions" popup="true">
+      <add-to-group group-id="MainMenu" relative-to-action="HelpMenu" anchor="before" />
+<!--      <action id="AutoGenTest.action.createnewtest" class="com.AutoGenTest.NewTestGeneratorAction" text="Generate Test" icon="/icons/SQIcon.png" description="Generate test for current class">-->
+<!--        <keyboard-shortcut first-keystroke="meta shift L" keymap="Mac OS X 10.5+" />-->
+<!--        <keyboard-shortcut first-keystroke="meta shift L" keymap="Mac OS X" />-->
+<!--        <keyboard-shortcut first-keystroke="control alt K" keymap="$default" />-->
+<!--        <add-to-group group-id="GenerateGroup" anchor="last" />-->
+<!--      </action>-->
+<!--      <action id="AutoGenTest.action.createnewtestwithaskmode" class="com.AutoGenTest.NewTestGeneratorConfirmMocksAction" text="Generate Test - Confirm Options" icon="/icons/SQIcon.png" description="Generate test for current class">-->
+<!--        <keyboard-shortcut first-keystroke="meta shift J" keymap="Mac OS X 10.5+" />-->
+<!--        <keyboard-shortcut first-keystroke="meta shift J" keymap="Mac OS X" />-->
+<!--        <keyboard-shortcut first-keystroke="alt K" keymap="$default" />-->
+<!--        <add-to-group group-id="GenerateGroup" anchor="last" />-->
+<!--      </action>-->
+      <action id="AutoGenTest.action.createtestmethods" class="org.open.autospockgenerate.GenerateTestAction" text="Generate Test Methods" description="Generate test testInfos">
+        <keyboard-shortcut first-keystroke="meta shift m" keymap="Mac OS X 10.5+" />
+        <keyboard-shortcut first-keystroke="meta shift m" keymap="Mac OS X" />
+        <keyboard-shortcut first-keystroke="alt m" keymap="$default" />
+        <add-to-group group-id="GenerateGroup" anchor="first" />
+      </action>
+<!--      <action id="AutoGenTest.action.testmethodhelp" class="com.AutoGenTest.completionhelp.CompletionHelpAction" text="Help" icon="/icons/SQIcon.png" description="Shows how to use AutoGenTest" />-->
+<!--      <action id="AutoGenTest.action.aboutAutoGenTest" class="com.AutoGenTest.completionhelp.AboutAction" text="About" icon="/icons/SQIcon.png" description="About AutoGenTest" />-->
+    </group>
+  </actions>
+  <application-components>
+<!--    <component>-->
+<!--      <implementation-class>com.AutoGenTest.startup.AutoGenTestApplicationComponent</implementation-class>-->
+<!--    </component>-->
+  </application-components>
 </idea-plugin>
