@@ -46,7 +46,7 @@ public class GenerateTestAction extends AnAction {
 
         SourceClass sourceClass = GenerateClassRegion.generateSourceClass(psiFile);
         List<SourceClass> members = GenerateFiledMockRegion.generateMockMembers(mainClass);
-        List<TestInfo> testInfos = GenerateMethodRegion.generateAllMethod(allMethods, allFields);
+        List<TestInfo> testInfos = GenerateMethodRegion.generateAllMethod(allMethods, members);
 
         VelocityEngine ve = buildVelocityEngine();
         // 获取模板文件

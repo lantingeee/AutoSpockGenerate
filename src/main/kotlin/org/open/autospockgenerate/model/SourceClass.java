@@ -12,6 +12,8 @@ public class SourceClass {
 
     public String testClassMemberName;
 
+    public Class aClass;
+
 //    // 初始化该对象的语句
 //    public String initExpression;
 

@@ -101,15 +101,13 @@ given:
 
 // Run the test
     #if($testInfo.needMockMethods.size()>1) then: #else expect: #end
-    ## TODO: FIX invoke method
-    #set($macro.qualifier =
-        "#if($testInfo.method.static)
-            ${method.containingClass.canonicalNameOrName}
-        #else
-            ${sourceClass.testClassMemberName}
+    #set($tempParam =
+        "#if(!$method.params)
+            #initParams($method.params)
         #end")
-def result = ${macro.qualifier}.#methodCall($testInfo.method, false);
-// Verify the results
+    def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${tempParam}) >> ${method.result}
+
+    // Verify the results
     #if($testInfo.expectedValueNull)
     assertNull(result);
     #elseif($testInfo.expectedValueTrue)
@@ -118,7 +116,7 @@ def result = ${macro.qualifier}.#methodCall($testInfo.method, false);
     #set($_ = $CodeStyleUtils.endMethodScope())
 #end
 
-##TODO 1.将变量初始化
+##TODO 1.将 会变化的 code 收集
 #macro(initParams $params)
     #foreach($param in $params)
         $param.name $param.testClassMemberName = new $param.name();

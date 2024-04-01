@@ -14,7 +14,7 @@ public class TestInfo {
     // 需要测试的方法
     public Method testMethod;
 
-    // 条件块
+    // where 条件块
     public Map<String, List<String>> varConditionMap;
 
 }
