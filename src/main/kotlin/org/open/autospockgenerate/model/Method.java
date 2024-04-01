@@ -4,7 +4,7 @@ package org.open.autospockgenerate.model;
 public class Method {
     public boolean isStatic;
 
-    // 对象名
+    // 调用该方法的对象名
     public String filed;
 
     // 方法名
