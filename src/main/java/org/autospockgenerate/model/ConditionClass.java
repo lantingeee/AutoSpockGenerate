@@ -1,4 +1,4 @@
-package org.open.autospockgenerate.model;
+package org.autospockgenerate.model;
 
 import java.util.List;
 import java.util.Map;

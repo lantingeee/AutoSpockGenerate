@@ -1,4 +1,4 @@
-package org.open.autospockgenerate.model;
+package org.autospockgenerate.model;
 
 
 public class Method {

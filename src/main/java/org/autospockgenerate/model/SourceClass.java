@@ -1,5 +1,8 @@
-package org.open.autospockgenerate.model;
+package org.autospockgenerate.model;
 
+
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiType;
 
 public class SourceClass {
 
@@ -7,6 +10,8 @@ public class SourceClass {
     public String name;
 
     public String packageName;
+
+    public String importContent;
 
     public SourceClassType type;
 

@@ -1,8 +1,8 @@
-package org.open.autospockgenerate.generate;
+package org.autospockgenerate.generate;
 
+import org.autospockgenerate.model.SourceClassType;
 import com.intellij.psi.*;
-import org.open.autospockgenerate.model.SourceClass;
-import org.open.autospockgenerate.model.SourceClassType;
+import org.autospockgenerate.model.SourceClass;
 
 public class GenerateClassRegion {
     public static SourceClass generateSourceClass(PsiFile psiFile) {
