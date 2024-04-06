@@ -2,6 +2,7 @@ package org.autospockgenerate.model;
 
 
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiType;
 
 public class SourceClass {
@@ -17,7 +18,8 @@ public class SourceClass {
 
     public String testClassMemberName;
 
-    public Class aClass;
+    // 该类的原始对象
+    public PsiField psiField;
 
 //    // 初始化该对象的语句
 //    public String initExpression;

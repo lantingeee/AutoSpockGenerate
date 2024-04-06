@@ -1,6 +1,8 @@
 package org.autospockgenerate.model;
 
 
+import java.util.List;
+
 public class Method {
     public boolean isStatic;
 
@@ -11,7 +13,7 @@ public class Method {
     public String methodCall;
 
     // 需要的入参
-    public ConditionClass[] params;
+    public List<ConditionClass> params;
 
     public ConditionClass result;
 }
