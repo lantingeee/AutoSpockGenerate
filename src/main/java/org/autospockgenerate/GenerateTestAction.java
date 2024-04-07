@@ -83,7 +83,6 @@ public class GenerateTestAction extends AnAction {
                 try {
                     // 添加 PsiClass 到目标目录
                     dic.add(createdClass);
-
                     // 通知 IDEA 更新文件系统视图
                     VirtualFile virtualFile = dic.getVirtualFile();
                     if (virtualFile != null) {
