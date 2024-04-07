@@ -2,6 +2,7 @@ plugins {
   id("java")
   id("org.jetbrains.kotlin.jvm") version "1.9.20"
   id("org.jetbrains.intellij") version "1.16.0"
+  id("com.jetbrains.intellij.groovy") version "1.16.0"
 }
 
 group = "org.open"
@@ -21,6 +22,7 @@ intellij {
   "com.intellij.java"
   /* Plugin Dependencies */))
 }
+
 
 tasks {
   // Set the JVM compatibility versions
