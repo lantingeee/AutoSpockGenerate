@@ -26,4 +26,59 @@ public class SourceClass {
 
     public SourceClass[] innerAttrClass;
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+
+    public String getImportContent() {
+        return importContent;
+    }
+
+    public void setImportContent(String importContent) {
+        this.importContent = importContent;
+    }
+
+    public SourceClassType getType() {
+        return type;
+    }
+
+    public void setType(SourceClassType type) {
+        this.type = type;
+    }
+
+    public String getTestClassMemberName() {
+        return testClassMemberName;
+    }
+
+    public void setTestClassMemberName(String testClassMemberName) {
+        this.testClassMemberName = testClassMemberName;
+    }
+
+    public PsiField getPsiField() {
+        return psiField;
+    }
+
+    public void setPsiField(PsiField psiField) {
+        this.psiField = psiField;
+    }
+
+    public SourceClass[] getInnerAttrClass() {
+        return innerAttrClass;
+    }
+
+    public void setInnerAttrClass(SourceClass[] innerAttrClass) {
+        this.innerAttrClass = innerAttrClass;
+    }
 }

@@ -1,15 +1,11 @@
 ## Customize the name of the member and local field (if needed) used to store the instance of the source class.
+#set($sourceClass.name = "${sourceClass.name}")
+#set($sourceClass.packageName = "${sourceClass.packageName}")
+#set($sourceClass.importContent = "${sourceClass.importContent}")
+#set($sourceClass.type = "${sourceClass.type}")
 #set($sourceClass.testClassMemberName = "${sourceClass.testClassMemberName}")
-## Configure how Bean DTOs are initialized.
-#set($minNumberOfSettersToCall = 5)
-#set($maxNumberOfSettersToCall = 70)
-#set($useStaticImportForInitMocks = true)
-## Set this to use mocks for mockable method parameters that end in "listener" or "callback" ignoring case.
-#set($useMocksForListenerAndCallbackParameters = true)
-#set($generateStubsAndVerifyStatements = true)
-## Use this to specify custom initialization values for dependencies and method parameters of certain types;
-## See https://squaretest.com#template_api_quick_settings for details.
-#set($initExpressionOverrides = {})
+###set($sourceClass.testClassMemberName = "${sourceClass.testClassMemberName}")
+
 ##----------------------------------------------------------------------------------------------------------------------
 
 ## Initialize the data model. This sets global variables based on the architype of the source class and Quick Settings.

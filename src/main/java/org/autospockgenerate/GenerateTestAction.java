@@ -1,10 +1,17 @@
 package org.autospockgenerate;
 
+import com.intellij.ide.highlighter.JavaClassFileType;
 import com.intellij.ide.highlighter.JavaFileType;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.RunResult;
 import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.fileTypes.PlainTextFileType;
+import com.intellij.openapi.fileTypes.UnknownFileType;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.newvfs.RefreshQueue;
+import com.intellij.psi.impl.PsiFileFactoryImpl;
 import org.apache.velocity.app.Velocity;
 import org.autospockgenerate.generate.GenerateFiledMockRegion;
 import org.autospockgenerate.generate.GenerateMethodRegion;
@@ -25,10 +32,14 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import org.jetbrains.annotations.NotNull;
 import org.autospockgenerate.generate.GenerateClassRegion;
 import org.autospockgenerate.model.SourceClass;
+//import org.jetbrains.plugins.groovy.GroovyLanguage;
+//import org.jetbrains.plugins.groovy.lang.psi.GroovyPsiElementFactory;
+//import org.jetbrains.plugins.groovy.lang.psi.api.statements.typedef.GrTypeDefinition;
 
+import java.io.IOException;
 import java.io.StringWriter;
 import java.util.List;
-import java.util.Properties;
+import com.intellij.openapi.vfs.VfsUtil;
 
 public class GenerateTestAction extends AnAction {
 
@@ -37,7 +48,7 @@ public class GenerateTestAction extends AnAction {
         try {
             Project project = e.getData(PlatformCoreDataKeys.PROJECT);
             PsiFile psiFile = e.getData(CommonDataKeys.PSI_FILE);
-//            String classPath = psiFile.getVirtualFile().getPath();
+            String path = psiFile.getVirtualFile().getParent().getPath();
 //            String title = "Hello World!";
 //            Messages.showMessageDialog(project, classPath, title, Messages.getInformationIcon());
 
@@ -71,30 +82,43 @@ public class GenerateTestAction extends AnAction {
             String text = sw.toString();
             System.out.println(text);
 
-            // 从 PsiFile 中获取 PsiJavaFile 对象，以便进一步操作 Java 类
-            PsiFileFactory instance = PsiFileFactory.getInstance(project);
-            PsiJavaFile testFile = (PsiJavaFile) (instance.createFileFromText(sourceClass.name + "Test" + ".groovy",
-                            JavaFileType.INSTANCE, text));
-            // 获取 PsiClass 对象
-            PsiClass createdClass = testFile.getClasses()[0];
+            // 或者直接通过 PsiFileFactory 创建带有内容的 Groovy 文件
+            // 创建文件内容
+            String testFileName = name.substring(0, name.indexOf(".")) + "Test" + ".groovy";
+            PsiFileFactory factory = new PsiFileFactoryImpl(dic.getProject());
 
-            // 将类文件保存到指定目录
-            ApplicationManager.getApplication().invokeAndWait(() -> WriteCommandAction.runWriteCommandAction(project, () -> {
-                try {
-                    // 添加 PsiClass 到目标目录
-                    dic.add(createdClass);
-                    // 通知 IDEA 更新文件系统视图
-                    VirtualFile virtualFile = dic.getVirtualFile();
-                    if (virtualFile != null) {
-                        RefreshQueue.getInstance().refresh(false, true, () -> {}, virtualFile);
-                    }
-                } catch (Throwable ex) {
-                    ex.printStackTrace();
-                }
-            }));
+            // 或者，如果需要立即保存，可以尝试强制刷新并写入内容
+            // 但请注意，这种方式通常不如通过 PsiDocumentManager 来得稳健
+            // TODO
+//            saveGroovyFile(project, psiFile, factory, testFileName, text);
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    public static void saveGroovyFile(Project project, PsiFile psiFile, PsiFileFactory factory, String testFileName, String text) {
+        // 在事务性操作中保存文件
+        new WriteCommandAction.Simple<>(psiFile.getProject()) {
+            final PsiDirectory dic = psiFile.getContainingDirectory();
+            @Override
+            protected void run() throws Throwable {
+
+                VirtualFile virtualFile = dic.getVirtualFile().createChildData(this,  testFileName);
+                PsiFile groovyFile = factory.createFileFromText(testFileName, JavaFileType.INSTANCE.getLanguage(), text, true, false);
+
+                Document document = FileDocumentManager.getInstance().getDocument(virtualFile);
+                if (document != null) {
+                    document.setText(text);
+                    PsiDocumentManager.getInstance(project).doPostponedOperationsAndUnblockDocument(document);
+                    PsiDocumentManager.getInstance(project).commitDocument(document);
+                }
+                // 确保所有关联的 Document 对象被提交
+                PsiDocumentManager.getInstance(psiFile.getProject()).commitAllDocuments();
+                // 保存所有已修改的文档到磁盘
+                FileDocumentManager.getInstance().saveAllDocuments();
+            }
+        }.execute();
     }
 
     public VelocityEngine buildVelocityEngine() {

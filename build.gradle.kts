@@ -1,8 +1,7 @@
 plugins {
   id("java")
-  id("org.jetbrains.kotlin.jvm") version "1.9.20"
   id("org.jetbrains.intellij") version "1.16.0"
-  id("com.jetbrains.intellij.groovy") version "1.16.0"
+  id("org.jetbrains.kotlin.jvm") version "1.9.20"
 }
 
 group = "org.open"
@@ -21,6 +20,14 @@ intellij {
   plugins.set(listOf(
   "com.intellij.java"
   /* Plugin Dependencies */))
+}
+
+dependencies {
+  // 示例：添加 Groovy 作为运行时依赖
+//  runtimeOnly("org.codehaus.groovy:groovy-all:3.0.9")
+
+  // 如果您的插件需要在运行时使用 Groovy PSI API
+  // 注意：对于 IntelliJ IDEA 插件开发，通常不需要这样做，因为 Groovy 支持由 IDEA 平台提供
 }
 
 
