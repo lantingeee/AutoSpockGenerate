@@ -3,6 +3,8 @@ package org.autospockgenerate.generate;
 import org.autospockgenerate.model.SourceClassType;
 import com.intellij.psi.*;
 import org.autospockgenerate.model.SourceClass;
+import org.autospockgenerate.util.ClassNameUtil;
+import org.autospockgenerate.util.FiledNameUtil;
 
 public class GenerateClassRegion {
     public static SourceClass generateSourceClass(PsiFile psiFile) {
@@ -14,15 +16,12 @@ public class GenerateClassRegion {
         // 创建文件
         // 准备数据: 类、被 mock 变量、方法
         String directory = psiFile.getContainingDirectory().getName();
-//        String name = psiFile.getName();
         String className = aClass.getName();
 
-        assert className != null;
-        char c = className.charAt(0);
         SourceClass sourceClass = new SourceClass();
-        sourceClass.name = className;
+        sourceClass.name = ClassNameUtil.getClassName(className);
         sourceClass.packageName = directory;
-        sourceClass.testClassMemberName = String.valueOf(c).toLowerCase() + className.substring(1);;
+        sourceClass.testClassMemberName = FiledNameUtil.lowerName(className);
         SourceClassType type = new SourceClassType();
         sourceClass.type = type;
         type.canonicalText = className;

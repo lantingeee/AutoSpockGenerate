@@ -21,9 +21,6 @@ public class SourceClass {
     // 该类的原始对象
     public PsiField psiField;
 
-//    // 初始化该对象的语句
-//    public String initExpression;
-
     public SourceClass[] innerAttrClass;
 
     public String getName() {

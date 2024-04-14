@@ -2,12 +2,14 @@ package org.autospockgenerate.generate;
 
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
+import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
-import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
 import groovy.util.logging.Slf4j;
 import org.apache.commons.compress.utils.Lists;
 import org.autospockgenerate.model.*;
+import org.autospockgenerate.util.ClassNameUtil;
+import org.autospockgenerate.util.FiledNameUtil;
 
 import java.util.*;
 
@@ -19,14 +21,15 @@ public class GenerateMethodRegion {
         for (PsiMethod method : allMethods) {
             PsiClass declaringClass = method.getContainingClass();
             // 如果方法的声明类不是Object类，则添加到结果列表中
-            if (declaringClass.equals(CommonClassNames.JAVA_LANG_OBJECT)) {
+            if (declaringClass instanceof ClsClassImpl && CommonClassNames.JAVA_LANG_OBJECT.
+                    equalsIgnoreCase(((ClsClassImpl) declaringClass).getStub().getQualifiedName())) {
                 continue;
             }
             JvmParameter[] parameters = method.getParameters();
             TestInfo testInfo = new TestInfo();
             testInfo.params = buildParamClass(parameters);
             testInfo.needMockMethods = buildMockMethod(method, members);
-            testInfo.testMethod = buildInvokeMethod(psiFile, method, testInfo);
+            testInfo.testMethod = buildInvokeTestMethod(psiFile, method, testInfo);
             // TODO
             testInfo.varConditionMap = new HashMap<>();
             testInfos.add(testInfo);
@@ -54,10 +57,10 @@ public class GenerateMethodRegion {
         PsiType filed = ((PsiParameterImpl) parameter).getType();
         String presentText = filed.getPresentableText();
         ConditionClass sourceClass = new ConditionClass();
-        sourceClass.name = presentText;
+        sourceClass.name = ClassNameUtil.getClassName(presentText);
         String canonicalText = filed.getCanonicalText();
         sourceClass.importContent = canonicalText;
-        sourceClass.testClassMemberName = presentText.toLowerCase() + presentText.substring(1);
+        sourceClass.testClassMemberName = FiledNameUtil.lowerName(presentText);
 
         SourceClassType type = new SourceClassType();
         sourceClass.type = type;
@@ -74,7 +77,6 @@ public class GenerateMethodRegion {
     public static List<Method> buildMockMethod(PsiMethod oriMethod, List<SourceClass> members) {
         ArrayList<Method> methods = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的所有方法
-        // 假设 youField 是我们想要查找引用的成员变量 PsiField 对象
         for (SourceClass member : members) {
             List<Method> fieldUsage = findFieldUsage(oriMethod, member.psiField);
             methods.addAll(fieldUsage);
@@ -130,11 +132,11 @@ public class GenerateMethodRegion {
         result.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
         return result;
     }
-    public static Method buildInvokeMethod(PsiFile psiFile, PsiMethod psiMethod, TestInfo testInfo) {
+    public static Method buildInvokeTestMethod(PsiFile psiFile, PsiMethod psiMethod, TestInfo testInfo) {
 
         Method result = new Method();
         result.isStatic = true;
-        result.filed = psiFile.getName();
+        result.filed = FiledNameUtil.name(psiFile.getName());
         result.methodCall = psiMethod.getName();
         PsiParameterList parameterList = psiMethod.getParameterList();
         List<ConditionClass> params = Lists.newArrayList();

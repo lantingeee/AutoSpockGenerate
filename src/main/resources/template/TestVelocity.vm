@@ -90,38 +90,48 @@ void test${StringUtils.capitalize(${testInfo.testMethod.methodCall})}() {
 given:
     ## Construct the source class if needed.
     #initParams(${testInfo.params})
-    #if($testInfo.needMockMethods.size()>1)
+    #if($testInfo.needMockMethods)
     when:
-        #mockMethod($testInfo)
+        #foreach($tempMethod in $testInfo.needMockMethods)
+            #mockMethod($tempMethod)
+        #end
     #end
 
 // Run the test
-    #if($testInfo.needMockMethods.size()>1) then: #else expect: #end
+    #if($testInfo.needMockMethods) then: #else expect: #end
     #set($tempParam =
-        "#if(!$method.params)
-            #initParams($method.params)
+        "#if($testInfo.params)
+            #combineParams($testInfo.params)
         #end")
-    def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${tempParam}) >> ${method.result}
 
-    // Verify the results
+def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${tempParam})
+
+// Verify the results
     #if($testInfo.expectedValueNull)
     assertNull(result);
     #elseif($testInfo.expectedValueTrue)
     assertTrue(result);
     #end
     #set($_ = $CodeStyleUtils.endMethodScope())
+}
 #end
 
 ##TODO 1.将 会变化的 code 收集
 #macro(initParams $params)
     #foreach($param in $params)
-        $param.name $param.testClassMemberName = new $param.name();
+        ${param.name} ${param.testClassMemberName} = new ${param.name}();
         ## 内部属性初始化
         ##        #if(!$param.innerAttrClass.empty)
         ##            #foreach($innerParm in $param.innerAttrClass)
         ##                $initParams($innerParm)
         ##            #end
         ##        #end
+    #end
+#end
+
+#macro(combineParams $params)
+    #foreach($param in $params)
+        ${param.testClassMemberName}#if($foreach.hasNext),#end
     #end
 #end
 
@@ -132,7 +142,7 @@ given:
             _ as $tm.name#if($foreach.hasNext),#end
             #end)
         #end")
-    ${method.filed}.${method.methodCall}(${tempParam}) >> ${method.result}
+    ${method.filed}.${method.methodCall}(${tempParam}) >> ${testInfo.result}
 #end
 
 

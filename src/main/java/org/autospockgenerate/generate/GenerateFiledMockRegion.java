@@ -7,6 +7,7 @@ import org.apache.commons.compress.utils.Lists;
 import org.autospockgenerate.model.ConditionClass;
 import org.autospockgenerate.model.SourceClass;
 import org.autospockgenerate.model.SourceClassType;
+import org.autospockgenerate.util.ClassNameUtil;
 
 import java.util.List;
 public class GenerateFiledMockRegion {
@@ -16,6 +17,10 @@ public class GenerateFiledMockRegion {
         PsiField[] allFields = psiFile.getAllFields();
         for (PsiField field : allFields) {
             SourceClass sourceClass = buildConditionClassMock(field);
+            // logger 属性名的跳过
+            if (sourceClass.getName().equalsIgnoreCase("logger")) {
+                continue;
+            }
             members.add(sourceClass);
         }
         return members;
@@ -28,10 +33,10 @@ public class GenerateFiledMockRegion {
     public static ConditionClass buildConditionClassByType(PsiType oriType, PsiField field) {
         String presentText = oriType.getPresentableText();
         ConditionClass sourceClass = new ConditionClass();
-        sourceClass.name = presentText;
+        sourceClass.name = ClassNameUtil.getClassName(presentText);
         String canonicalText = oriType.getCanonicalText();
         sourceClass.importContent = canonicalText;
-        sourceClass.testClassMemberName = presentText.toLowerCase() + presentText.substring(1);;
+        sourceClass.testClassMemberName = presentText.substring(0, 1).toLowerCase() + presentText.substring(1);
         SourceClassType type = new SourceClassType();
         sourceClass.type = type;
         type.canonicalText = canonicalText;

@@ -12,6 +12,7 @@ import com.intellij.openapi.fileTypes.UnknownFileType;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.newvfs.RefreshQueue;
 import com.intellij.psi.impl.PsiFileFactoryImpl;
+import org.apache.commons.lang.StringUtils;
 import org.apache.velocity.app.Velocity;
 import org.autospockgenerate.generate.GenerateFiledMockRegion;
 import org.autospockgenerate.generate.GenerateMethodRegion;
@@ -42,15 +43,11 @@ import java.util.List;
 import com.intellij.openapi.vfs.VfsUtil;
 
 public class GenerateTestAction extends AnAction {
-
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         try {
             Project project = e.getData(PlatformCoreDataKeys.PROJECT);
             PsiFile psiFile = e.getData(CommonDataKeys.PSI_FILE);
-            String path = psiFile.getVirtualFile().getParent().getPath();
-//            String title = "Hello World!";
-//            Messages.showMessageDialog(project, classPath, title, Messages.getInformationIcon());
 
             PsiJavaFile sourceFile = (PsiJavaFile) psiFile;
             PsiClass[] classes = sourceFile.getClasses();
@@ -72,9 +69,12 @@ public class GenerateTestAction extends AnAction {
             Template t = ve.getTemplate("TestVelocity.vm");
             // 设置变量
             VelocityContext ctx = new VelocityContext();
+
+            StringUtils stringUtils = new StringUtils();
+            ctx.put("StringUtils", stringUtils);
             ctx.put("sourceClass", sourceClass);
             ctx.put("mockMembers", members);
-            ctx.put("methods", testInfos);
+            ctx.put("testInfos", testInfos);
 
             // 输出
             StringWriter sw = new StringWriter();
@@ -89,8 +89,7 @@ public class GenerateTestAction extends AnAction {
 
             // 或者，如果需要立即保存，可以尝试强制刷新并写入内容
             // 但请注意，这种方式通常不如通过 PsiDocumentManager 来得稳健
-            // TODO
-//            saveGroovyFile(project, psiFile, factory, testFileName, text);
+            saveGroovyFile(project, psiFile, factory, testFileName, text);
 
         } catch (Exception ex) {
             ex.printStackTrace();
