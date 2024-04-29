@@ -17,7 +17,6 @@ public class FiledNameUtil {
             name = name.replace("<", "");
             name = name.replace(">", "");
         }
-
         String appendName = name.substring(0, 1).toLowerCase() + name.substring(1);
         if (Lists.newArrayList("long", "int", "float").contains(appendName)) {
             return appendName + "0";
