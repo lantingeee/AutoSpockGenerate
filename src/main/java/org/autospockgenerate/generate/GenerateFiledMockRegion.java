@@ -1,8 +1,6 @@
 package org.autospockgenerate.generate;
 
-import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
-import com.intellij.psi.impl.source.PsiParameterImpl;
 import org.apache.commons.compress.utils.Lists;
 import org.autospockgenerate.model.ConditionClass;
 import org.autospockgenerate.model.SourceClass;

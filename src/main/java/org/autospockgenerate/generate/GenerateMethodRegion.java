@@ -109,6 +109,14 @@ public class GenerateMethodRegion {
                     continue;
                 }
                 System.out.println("find mockMethod -------" + resolvedMethod.getName());
+
+                // 构造方法名和入参
+                Method method = buildInvokeMockMethod(resolvedMethod, field);
+                PsiType returnType = resolvedMethod.getReturnType();
+                // 构建返回值
+                method.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
+                methods.add(method);
+
                 methods.add(buildInvokeMockMethod(resolvedMethod, field));
             }
         }
