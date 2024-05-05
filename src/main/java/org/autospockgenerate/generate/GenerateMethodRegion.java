@@ -122,7 +122,7 @@ public class GenerateMethodRegion {
                 }
                 // 获取调用返回值表达式
                 List<PsiIfStatement> conditions = ConditionCollector.
-                        collectConditionsUsingExpression(call, oriMethod, Lists.newArrayList());
+                        collectConditionsFromBody(call, oriMethod.getBody(), Lists.newArrayList());
                 System.out.println("find mockMethod -------" + resolvedMethod.getName());
                 testMethods.add(buildNeedMockMethod(oriMethod, field, conditions));
             }
