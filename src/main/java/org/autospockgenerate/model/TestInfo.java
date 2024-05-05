@@ -9,10 +9,10 @@ public class TestInfo {
     public List<ConditionClass> params;
 
     // 需要 mock 的方法
-    public List<Method> needMockMethods;
+    public List<TestMethod> needMockTestMethods;
 
     // 需要测试的方法
-    public Method testMethod;
+    public TestMethod testMethod;
 
     // where 条件块
     public Map<String, List<String>> varConditionMap;
@@ -25,19 +25,19 @@ public class TestInfo {
         this.params = params;
     }
 
-    public List<Method> getNeedMockMethods() {
-        return needMockMethods;
+    public List<TestMethod> getNeedMockMethods() {
+        return needMockTestMethods;
     }
 
-    public void setNeedMockMethods(List<Method> needMockMethods) {
-        this.needMockMethods = needMockMethods;
+    public void setNeedMockMethods(List<TestMethod> needMockTestMethods) {
+        this.needMockTestMethods = needMockTestMethods;
     }
 
-    public Method getTestMethod() {
+    public TestMethod getTestMethod() {
         return testMethod;
     }
 
-    public void setTestMethod(Method testMethod) {
+    public void setTestMethod(TestMethod testMethod) {
         this.testMethod = testMethod;
     }
 

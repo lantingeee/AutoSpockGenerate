@@ -65,8 +65,8 @@ def setup() {
 #end
 
 #macro(generateAllTestCode $testInfos)
-    #foreach($method in $testInfos)
-        #generateTestMethod($method)
+    #foreach($testMethod in $testInfos)
+        #generateTestMethod($testMethod)
     #end
 #end
 
@@ -79,15 +79,15 @@ void test${StringUtils.capitalize(${testInfo.testMethod.methodCall})}() {
 given:
     ## Construct the source class if needed.
     #initParams(${testInfo.params})
-    #if($testInfo.needMockMethods)
+    #if($testInfo.needMockTestMethods)
     when:
-        #foreach($tempMethod in $testInfo.needMockMethods)
+        #foreach($tempMethod in $testInfo.needMockTestMethods)
             #mockMethod($tempMethod)
         #end
     #end
 
 // Run the test
-    #if($testInfo.needMockMethods) then: #else expect: #end
+    #if($testInfo.needMockTestMethods) then: #else expect: #end
     #set($tempParam =
         "#if($testInfo.params)
             #combineParams($testInfo.params)
@@ -124,14 +124,14 @@ def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${te
     #end
 #end
 
-#macro(mockMethod $method)
+#macro(mockMethod $testMethod)
     #set($tempParam =
-        "#if(!$method.params)
-            #foreach($tm in $method.params)
+        "#if(!$testMethod.params)
+            #foreach($tm in $testMethod.params)
             _ as $tm.name#if($foreach.hasNext),#end
             #end)
         #end")
-    ${method.filed}.${method.methodCall}(${tempParam}) >> ${method.result.testClassMemberName}
+    ${testMethod.filed}.${testMethod.methodCall}(${tempParam}) >> ${testMethod.result.testClassMemberName}
 #end
 
 

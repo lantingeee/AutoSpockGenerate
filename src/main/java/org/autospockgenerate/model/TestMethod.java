@@ -3,7 +3,7 @@ package org.autospockgenerate.model;
 
 import java.util.List;
 
-public class Method {
+public class TestMethod {
     public boolean isStatic;
 
     // 调用该方法的对象名
@@ -16,6 +16,10 @@ public class Method {
     public List<ConditionClass> params;
 
     public ConditionClass result;
+
+    // 返回值 列表
+    public List<ReturnExpression> returnExpressions;
+
 
     public boolean isStatic() {
         return isStatic;
@@ -55,5 +59,13 @@ public class Method {
 
     public void setResult(ConditionClass result) {
         this.result = result;
+    }
+
+    public List<ReturnExpression> getReturnExpressions() {
+        return returnExpressions;
+    }
+
+    public void setReturnExpressions(List<ReturnExpression> returnExpressions) {
+        this.returnExpressions = returnExpressions;
     }
 }

@@ -1,12 +1,18 @@
 package org.autospockgenerate.generate;
 
+import com.fasterxml.jackson.jr.ob.JSON;
+import com.google.gson.Gson;
+import com.google.gson.JsonParser;
+import com.intellij.json.JsonUtil;
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.util.io.jackson.JacksonUtil;
 import groovy.util.logging.Slf4j;
 import org.apache.commons.compress.utils.Lists;
+import org.autospockgenerate.collector.ConditionCollector;
 import org.autospockgenerate.model.*;
 import org.autospockgenerate.util.ClassNameUtil;
 import org.autospockgenerate.util.FiledNameUtil;
@@ -28,9 +34,13 @@ public class GenerateMethodRegion {
             JvmParameter[] parameters = method.getParameters();
             TestInfo testInfo = new TestInfo();
             testInfo.params = buildParamClass(parameters);
-            testInfo.needMockMethods = buildMockMethod(method, members);
-            testInfo.testMethod = buildInvokeTestMethod(psiFile, method, testInfo);
-            // TODO
+
+            // 1.对 入参 做条件语句
+            // 2.对 Mock返回值 做条件语句
+            // 3.对 方法返回值 做条件语句
+            // service.metaClass.retrieveData = { -> "mocked data" } )
+            testInfo.needMockTestMethods = buildNeedMockMethod(method, members);
+            testInfo.testMethod = buildInvokeTestMethod(psiFile, method);
             testInfo.varConditionMap = new HashMap<>();
             testInfos.add(testInfo);
         }
@@ -74,27 +84,29 @@ public class GenerateMethodRegion {
      * @param members   成员变量列表
      * @return 需要被mock 的方法
      */
-    public static List<Method> buildMockMethod(PsiMethod oriMethod, List<SourceClass> members) {
-        ArrayList<Method> methods = Lists.newArrayList();
+    public static List<TestMethod> buildNeedMockMethod(PsiMethod oriMethod, List<SourceClass> members) {
+        ArrayList<TestMethod> testMethods = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的所有方法
         for (SourceClass member : members) {
-            List<Method> fieldUsage = findFieldUsage(oriMethod, member.psiField);
-            methods.addAll(fieldUsage);
+            List<TestMethod> fieldUsage = findFieldUsage(oriMethod, member.psiField);
+            testMethods.addAll(fieldUsage);
         }
-        return methods;
+        return testMethods;
     }
-    public static List<Method> findFieldUsage(PsiMethod oriMethod, PsiField field) {
-        ArrayList<Method> methods = Lists.newArrayList();
+    public static List<TestMethod> findFieldUsage(PsiMethod oriMethod, PsiField field) {
+        ArrayList<TestMethod> testMethods = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的方法
         // 假设 youField 是我们想要查找引用的成员变量 PsiField 对象
         // 遍历方法体内的所有表达式，查找方法调用
         PsiCodeBlock body = oriMethod.getBody();
         if (body == null) {
-            return methods;
+            return testMethods;
         }
         for (PsiStatement statement : body.getStatements()) {
             // 搜索方法调用
             Collection<PsiMethodCallExpression> methodCalls = PsiTreeUtil.collectElementsOfType(statement, PsiMethodCallExpression.class);
+
+            // 为方法调用 集合中的每个方法调用
             for (PsiMethodCallExpression call : methodCalls) {
                 // 获取被调用的方法引用
                 PsiReferenceExpression methodExpression = call.getMethodExpression();
@@ -108,25 +120,23 @@ public class GenerateMethodRegion {
                 if (!fieldClass.getName().equalsIgnoreCase(invokeClass.getName())) {
                     continue;
                 }
+                // 获取调用返回值表达式
+                List<PsiIfStatement> conditions = ConditionCollector.
+                        collectConditionsUsingExpression(call, oriMethod, Lists.newArrayList());
                 System.out.println("find mockMethod -------" + resolvedMethod.getName());
-
-                // 构造方法名和入参
-                Method method = buildInvokeMockMethod(resolvedMethod, field);
-                PsiType returnType = resolvedMethod.getReturnType();
-                // 构建返回值
-                method.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
-                methods.add(method);
-
-                methods.add(buildInvokeMockMethod(resolvedMethod, field));
+                testMethods.add(buildNeedMockMethod(oriMethod, field, conditions));
             }
         }
-        return methods;
+        return testMethods;
     }
-    public static Method buildInvokeMockMethod(PsiMethod psiMethod, PsiField field) {
-        Method result = new Method();
+
+    public static TestMethod buildNeedMockMethod(PsiMethod psiMethod, PsiField field, List<PsiIfStatement> conditions) {
+        TestMethod result = new TestMethod();
         result.isStatic = true;
         result.filed = field.getName();
         result.methodCall = psiMethod.getName();
+        // 根据对 返回值的 condition 去反构造返回值
+        result.returnExpressions = buildReturnExpression(psiMethod, conditions);
         PsiParameterList parameterList = psiMethod.getParameterList();
         List<ConditionClass> params = Lists.newArrayList();
         for (PsiParameter parameter : parameterList.getParameters()) {
@@ -140,12 +150,13 @@ public class GenerateMethodRegion {
         result.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
         return result;
     }
-    public static Method buildInvokeTestMethod(PsiFile psiFile, PsiMethod psiMethod, TestInfo testInfo) {
+    public static TestMethod buildInvokeTestMethod(PsiFile psiFile, PsiMethod psiMethod) {
 
-        Method result = new Method();
+        TestMethod result = new TestMethod();
         result.isStatic = true;
         result.filed = FiledNameUtil.name(psiFile.getName());
         result.methodCall = psiMethod.getName();
+//        result.returnExpressions = buildReturnExpression(psiMethod); TODO
         PsiParameterList parameterList = psiMethod.getParameterList();
         List<ConditionClass> params = Lists.newArrayList();
         for (PsiParameter parameter : parameterList.getParameters()) {
@@ -163,6 +174,24 @@ public class GenerateMethodRegion {
         }
         result.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, null);
         return result;
+    }
+
+    // 对于方法调用的 Mock 的返回值 列表
+    public static List<ReturnExpression> buildReturnExpression(PsiMethod psiMethod, List<PsiIfStatement> conditions){
+        List<ReturnExpression> returnExpList = Lists.newArrayList();
+        // 如果没有条件语句，直接返回空对象即可
+        // TODO
+
+        // 根据 对 返回值做的条件去反构造返回值，以达到 条件覆盖的目的
+//        for (PsiIfStatement condition : conditions) {
+//            ReturnExpression returnExpression = new ReturnExpression();
+//            returnExpression.expression = condition.getThenBranch().getText();
+//            returnExpression.condition = condition.getCondition().getText();
+//            returnExpList.add(returnExpression);
+//        }
+        Gson x = new Gson();
+        System.out.println(x.toJson(conditions));
+        return returnExpList;
     }
 
 }
