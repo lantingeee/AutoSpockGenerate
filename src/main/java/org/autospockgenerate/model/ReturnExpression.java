@@ -1,11 +1,25 @@
 package org.autospockgenerate.model;
 
+import com.intellij.psi.tree.IElementType;
+
 public class ReturnExpression {
 
     public String path;
 
+    public String classType;
+
     public String value;
-    public Class classType;
+
+    public String name;
+    public IElementType operateType;
+
+    public IElementType getOperateType() {
+        return operateType;
+    }
+
+    public void setOperateType(IElementType operateType) {
+        this.operateType = operateType;
+    }
 
     public String getPath() {
         return path;
@@ -15,11 +29,11 @@ public class ReturnExpression {
         this.path = path;
     }
 
-    public Class getClassType() {
+    public String getClassType() {
         return classType;
     }
 
-    public void setClassType(Class classType) {
+    public void setClassType(String classType) {
         this.classType = classType;
     }
 

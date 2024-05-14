@@ -8,6 +8,8 @@ import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
+import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
+import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.io.jackson.JacksonUtil;
 import groovy.util.logging.Slf4j;
@@ -16,6 +18,7 @@ import org.autospockgenerate.collector.ConditionCollector;
 import org.autospockgenerate.model.*;
 import org.autospockgenerate.util.ClassNameUtil;
 import org.autospockgenerate.util.FiledNameUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -136,7 +139,7 @@ public class GenerateMethodRegion {
         result.filed = field.getName();
         result.methodCall = psiMethod.getName();
         // 根据对 返回值的 condition 去反构造返回值
-        result.returnExpressions = buildReturnExpression(psiMethod, conditions);
+        result.returnExpressions = buildReturnExpression(psiMethod, field, conditions);
         PsiParameterList parameterList = psiMethod.getParameterList();
         List<ConditionClass> params = Lists.newArrayList();
         for (PsiParameter parameter : parameterList.getParameters()) {
@@ -177,21 +180,50 @@ public class GenerateMethodRegion {
     }
 
     // 对于方法调用的 Mock 的返回值 列表
-    public static List<ReturnExpression> buildReturnExpression(PsiMethod psiMethod, List<PsiIfStatement> conditions){
+    public static List<ReturnExpression> buildReturnExpression(PsiMethod psiMethod, PsiField field, List<PsiIfStatement> statements) {
         List<ReturnExpression> returnExpList = Lists.newArrayList();
         // 如果没有条件语句，直接返回空对象即可
         // TODO
 
         // 根据 对 返回值做的条件去反构造返回值，以达到 条件覆盖的目的
-//        for (PsiIfStatement condition : conditions) {
-//            ReturnExpression returnExpression = new ReturnExpression();
+        for (PsiIfStatement statement : statements) {
+            PsiExpression condition = statement.getCondition();
+            PsiElement[] children = condition.getChildren();
+            for (PsiElement child : children) {
+                if (child instanceof PsiBinaryExpression) {
+                    PsiBinaryExpression binary = (PsiBinaryExpression) child;
+                    ReturnExpression returnExpression = new ReturnExpression();
+                    returnExpression.operateType = binary.getOperationTokenType();
+                    PsiElement firstChild = binary.getFirstChild();
+                    returnExpression.path = findJsonPath(firstChild, field);
+                    returnExpression.classType = ((PsiReferenceExpressionImpl) firstChild).getType().getPresentableText();
+
+                    PsiElement lastChild = binary.getLastChild();
+                    returnExpression.value = lastChild.getText();
+
+                    returnExpList.add(returnExpression);
+                } else if (child instanceof PsiMethodCallExpression){
+                    continue;
+                }
+
+            }
+            ReturnExpression returnExpression = new ReturnExpression();
 //            returnExpression.expression = condition.getThenBranch().getText();
 //            returnExpression.condition = condition.getCondition().getText();
-//            returnExpList.add(returnExpression);
-//        }
-        Gson x = new Gson();
-        System.out.println(x.toJson(conditions));
+            returnExpList.add(returnExpression);
+        }
         return returnExpList;
+    }
+
+    private static String findJsonPath(PsiElement firstChild, PsiField field) {
+
+        String canonicalText = ((PsiReferenceExpressionImpl) firstChild).getCanonicalText();
+
+        if (firstChild.getReference().equals(field.getReference())) {
+            return ".";
+        }
+        // TODO
+        return "";
     }
 
 }
