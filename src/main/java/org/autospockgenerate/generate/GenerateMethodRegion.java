@@ -202,7 +202,8 @@ public class GenerateMethodRegion {
                     returnExpression.value = lastChild.getText();
 
                     returnExpList.add(returnExpression);
-                } else if (child instanceof PsiMethodCallExpression){
+                } else if (child instanceof PsiMethodCallExpression) {
+                    // TODO: 方法的类型
                     continue;
                 }
 
