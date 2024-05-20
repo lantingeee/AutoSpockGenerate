@@ -10,6 +10,7 @@ import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
 import com.intellij.psi.tree.IElementType;
+import com.intellij.psi.tree.java.IJavaElementType;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.io.jackson.JacksonUtil;
 import groovy.util.logging.Slf4j;
@@ -38,8 +39,9 @@ public class GenerateMethodRegion {
             TestInfo testInfo = new TestInfo();
             testInfo.params = buildParamClass(parameters);
 
-            // 1.对 入参 做条件语句
-            // 2.对 Mock返回值 做条件语句
+            // 如何 增加 分支的覆盖率呢？
+            // 1.对 入参 做条件语句，可以通过 多个 Test 方法，每个方法的入参不同来实现
+            // 2.对 Mock返回值 做条件语句，需要解析 mock 的方法返回值有哪些条件引用，然后生成对应的条件语句
             // 3.对 方法返回值 做条件语句
             // service.metaClass.retrieveData = { -> "mocked data" } )
             testInfo.needMockTestMethods = buildNeedMockMethod(method, members);
@@ -138,8 +140,7 @@ public class GenerateMethodRegion {
         result.isStatic = true;
         result.filed = field.getName();
         result.methodCall = psiMethod.getName();
-        // 根据对 返回值的 condition 去反构造返回值
-        result.returnExpressions = buildReturnExpression(psiMethod, field, conditions);
+
         PsiParameterList parameterList = psiMethod.getParameterList();
         List<ConditionClass> params = Lists.newArrayList();
         for (PsiParameter parameter : parameterList.getParameters()) {
@@ -151,7 +152,44 @@ public class GenerateMethodRegion {
         result.params = params;
         PsiType returnType = psiMethod.getReturnType();
         result.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
+
+        // 根据对 返回值的 condition 去反构造返回值
+        result.returnExpressions = buildReturnExpression(psiMethod, field, conditions);
+
         return result;
+    }
+
+    public static String buildPrepareResponse(PsiType oriType, List<ReturnExpression> returnExpressions) {
+        String presentText = oriType.getPresentableText();
+        String className = ClassNameUtil.getClassName(presentText);
+
+        int index = 1;
+        StringBuilder initResp = new StringBuilder();
+        for (ReturnExpression returnExpression : returnExpressions) {
+            if (returnExpression.getOperateType() == JavaTokenType.EQEQ) {
+//                if (returnExpression.getOperateType())
+                initResp.append(className).append("resp").append(index).append(" = ").append("new ").append(className).append("()\n");
+                index++;
+                initResp.append(className).append("resp").append(index).append(" = ").append("null\n");
+                index++;
+            }
+        }
+        return initResp.toString();
+    }
+
+
+    public static ConditionClass buildConditionClassByType1(PsiType oriType, PsiField field) {
+        String presentText = oriType.getPresentableText();
+        ConditionClass sourceClass = new ConditionClass();
+        sourceClass.name = ClassNameUtil.getClassName(presentText);
+        String canonicalText = oriType.getCanonicalText();
+        sourceClass.importContent = canonicalText;
+        sourceClass.testClassMemberName = presentText.substring(0, 1).toLowerCase() + presentText.substring(1);
+        SourceClassType type = new SourceClassType();
+        sourceClass.type = type;
+        type.canonicalText = canonicalText;
+        sourceClass.psiField = field;
+        return sourceClass;
     }
     public static TestMethod buildInvokeTestMethod(PsiFile psiFile, PsiMethod psiMethod) {
 
@@ -197,23 +235,31 @@ public class GenerateMethodRegion {
                     PsiElement firstChild = binary.getFirstChild();
                     returnExpression.path = findJsonPath(firstChild, field);
                     returnExpression.classType = ((PsiReferenceExpressionImpl) firstChild).getType().getPresentableText();
-
                     PsiElement lastChild = binary.getLastChild();
                     returnExpression.value = lastChild.getText();
 
                     returnExpList.add(returnExpression);
                 } else if (child instanceof PsiMethodCallExpression) {
-                    // TODO: 方法的类型
-                    continue;
+                    returnExpList.add(findReturnExpressionByCall((PsiMethodCallExpression) child));
                 }
-
             }
-            ReturnExpression returnExpression = new ReturnExpression();
-//            returnExpression.expression = condition.getThenBranch().getText();
-//            returnExpression.condition = condition.getCondition().getText();
-            returnExpList.add(returnExpression);
         }
         return returnExpList;
+    }
+    public static ReturnExpression findReturnExpressionByCall(PsiMethodCallExpression callExpression) {
+        PsiElement firstChild = callExpression.getFirstChild();
+        PsiElement lastChild = callExpression.getLastChild();
+        String methodName = firstChild.getText();
+        ReturnExpression reExp = new ReturnExpression();
+
+        if ("CollectionUtils.isEmpty".equalsIgnoreCase(methodName)) {
+            reExp.setOperateType(JavaTokenType.EQEQ);
+            reExp.setValue("null");
+            reExp.setClassType("java.util.ArrayList");
+        }
+        reExp.setPath(convertToJsonPath(lastChild.getText().replace("(", "")
+                .replace(")", "")));
+        return reExp;
     }
 
     private static String findJsonPath(PsiElement firstChild, PsiField field) {
@@ -227,4 +273,14 @@ public class GenerateMethodRegion {
         return "";
     }
 
+    public static String convertToJsonPath(String javaGetterPath) {
+        // 假设输入字符串格式为 "response.getOrderList" 形式
+        // 使用正则表达式移除get或is前缀（忽略大小写），并转换为小写，然后替换点号为JSON路径的点分隔符，并在前面加上 "$"
+        String jsonPath = javaGetterPath.replaceAll("(?i)^get|^is", "") // 移除get或is前缀
+                .replace(".", "") // 移除原点号，因为我们将在最后统一添加JSON路径的点分隔符
+                .toLowerCase(); // 转换为小写，虽然JSON路径不区分大小写，但保持一致性
+        // 添加JSON路径的起点和点分隔符
+        jsonPath = "$." + jsonPath.replace(".", "\\.");
+        return jsonPath;
+    }
 }
