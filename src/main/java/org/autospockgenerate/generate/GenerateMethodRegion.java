@@ -159,19 +159,40 @@ public class GenerateMethodRegion {
         return result;
     }
 
-    public static String buildPrepareResponse(PsiType oriType, List<ReturnExpression> returnExpressions) {
+    public static String buildPrepareResponse(PsiType oriType, List<ObjectConditionNode> nodes) {
         String presentText = oriType.getPresentableText();
         String className = ClassNameUtil.getClassName(presentText);
 
-        int index = 1;
         StringBuilder initResp = new StringBuilder();
-        for (ReturnExpression returnExpression : returnExpressions) {
-            if (returnExpression.getOperateType() == JavaTokenType.EQEQ) {
-//                if (returnExpression.getOperateType())
-                initResp.append(className).append("resp").append(index).append(" = ").append("new ").append(className).append("()\n");
-                index++;
-                initResp.append(className).append("resp").append(index).append(" = ").append("null\n");
-                index++;
+        for (ObjectConditionNode lastNode : nodes) {
+
+            ObjectConditionNode temp = lastNode;
+            ObjectConditionNode tempNext = null;
+
+            while (true) {
+                int index = 1;
+                if (temp == null) {
+                    break;
+                }
+
+                StringBuilder var1 = initResp.append(className).append(" ").append(temp.getNodeName()).append(index);
+                StringBuilder var2 = initResp.append(className).append(" resp").append(index);
+                // 初始化当前 node 的声明语句
+                if (temp.getOperateType() == JavaTokenType.EQEQ) {
+                    var1.append(" = ").append("new ").append(className).append("();\n");
+                    index++;
+                    var2.append(" = ").append("null;\n");
+                    index++;
+                }
+
+                // 有子节点
+                if (tempNext != null) {
+                    // TODO: fix First
+                    var1.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("1").append(")");
+                    var2.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("2").append(")");
+                }
+                tempNext = temp;
+                temp = temp.getLastNode();
             }
         }
         return initResp.toString();

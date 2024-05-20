@@ -20,8 +20,6 @@ public class TestMethod {
     // 返回值 列表
     public List<ReturnExpression> returnExpressions;
 
-    public String mockedResponse;
-
 
     public boolean isStatic() {
         return isStatic;
