@@ -154,7 +154,8 @@ public class GenerateMethodRegion {
         result.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
 
         // 根据对 返回值的 condition 去反构造返回值
-        result.returnExpressions = buildReturnExpression(psiMethod, field, conditions);
+        List<ObjectConditionNode> conditionNodes = buildObjectConditionNode(psiMethod, field, conditions);
+
 
         return result;
     }
@@ -165,16 +166,13 @@ public class GenerateMethodRegion {
 
         StringBuilder initResp = new StringBuilder();
         for (ObjectConditionNode lastNode : nodes) {
-
             ObjectConditionNode temp = lastNode;
             ObjectConditionNode tempNext = null;
-
             while (true) {
                 int index = 1;
                 if (temp == null) {
                     break;
                 }
-
                 StringBuilder var1 = initResp.append(className).append(" ").append(temp.getNodeName()).append(index);
                 StringBuilder var2 = initResp.append(className).append(" resp").append(index);
                 // 初始化当前 node 的声明语句
@@ -184,15 +182,14 @@ public class GenerateMethodRegion {
                     var2.append(" = ").append("null;\n");
                     index++;
                 }
-
                 // 有子节点
                 if (tempNext != null) {
                     // TODO: fix First
-                    var1.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("1").append(")");
-                    var2.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("2").append(")");
+                    var1.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("1").append(")\n");
+                    var2.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("2").append(")\n");
                 }
                 tempNext = temp;
-                temp = temp.getLastNode();
+                temp = temp.getPreviousNode();
             }
         }
         return initResp.toString();
@@ -239,52 +236,66 @@ public class GenerateMethodRegion {
     }
 
     // 对于方法调用的 Mock 的返回值 列表
-    public static List<ReturnExpression> buildReturnExpression(PsiMethod psiMethod, PsiField field, List<PsiIfStatement> statements) {
-        List<ReturnExpression> returnExpList = Lists.newArrayList();
+    public static List<ObjectConditionNode> buildObjectConditionNode(PsiMethod psiMethod, PsiField field, List<PsiIfStatement> statements) {
+        List<ObjectConditionNode> conditionNodeList = Lists.newArrayList();
         // 如果没有条件语句，直接返回空对象即可
         // TODO
 
-        // 根据 对 返回值做的条件去反构造返回值，以达到 条件覆盖的目的
+        // 根据 返回值上的条件去反构造返回值，以达到 条件覆盖的目的
         for (PsiIfStatement statement : statements) {
             PsiExpression condition = statement.getCondition();
             PsiElement[] children = condition.getChildren();
             for (PsiElement child : children) {
-                if (child instanceof PsiBinaryExpression) {
-                    PsiBinaryExpression binary = (PsiBinaryExpression) child;
-                    ReturnExpression returnExpression = new ReturnExpression();
-                    returnExpression.operateType = binary.getOperationTokenType();
-                    PsiElement firstChild = binary.getFirstChild();
-                    returnExpression.path = findJsonPath(firstChild, field);
-                    returnExpression.classType = ((PsiReferenceExpressionImpl) firstChild).getType().getPresentableText();
-                    PsiElement lastChild = binary.getLastChild();
-                    returnExpression.value = lastChild.getText();
-
-                    returnExpList.add(returnExpression);
+                if (child instanceof PsiBinaryExpression binary) {
+                    // 构造 一个链表，并将尾节点添加到 conditionNodeList 中
+                    ObjectConditionNode conditionNode = findObjectConditionNode(binary);
+                    conditionNodeList.add(conditionNode);
                 } else if (child instanceof PsiMethodCallExpression) {
-                    returnExpList.add(findReturnExpressionByCall((PsiMethodCallExpression) child));
+                    conditionNodeList.add(findReturnExpressionByCall((PsiMethodCallExpression) child));
                 }
             }
         }
-        return returnExpList;
+        return conditionNodeList;
     }
-    public static ReturnExpression findReturnExpressionByCall(PsiMethodCallExpression callExpression) {
+
+    public static ObjectConditionNode findObjectConditionNode(PsiBinaryExpression binary) {
+        // 二元表达式 等号
+        ObjectConditionNode lastNode = new ObjectConditionNode();
+        lastNode.operateType = binary.getOperationTokenType();
+
+        PsiElement firstChild = binary.getFirstChild();
+        // 等号右边 lastChild.text 是值， 等号左侧 firstChild 为 被判断的对象的路径
+        PsiElement lastChild = binary.getLastChild();
+        lastNode.value = lastChild.getText();
+
+        // TODO:1 通过 查询该路径，找到引用链，构造 previousNode
+        lastNode.nodeName = null;
+        lastNode.className = null;
+        String path = convertToJsonPath(firstChild.getText().replace("(", "")
+                .replace(")", ""));
+        lastNode.previousNode = null;
+        return lastNode;
+    }
+    public static ObjectConditionNode findReturnExpressionByCall(PsiMethodCallExpression callExpression) {
         PsiElement firstChild = callExpression.getFirstChild();
         PsiElement lastChild = callExpression.getLastChild();
         String methodName = firstChild.getText();
-        ReturnExpression reExp = new ReturnExpression();
+        ObjectConditionNode conNode = new ObjectConditionNode();
 
         if ("CollectionUtils.isEmpty".equalsIgnoreCase(methodName)) {
-            reExp.setOperateType(JavaTokenType.EQEQ);
-            reExp.setValue("null");
-            reExp.setClassType("java.util.ArrayList");
+            conNode.operateType = JavaTokenType.EQEQ;
+            conNode.value = "null";
+            conNode.className = "java.util.ArrayList";
         }
-        reExp.setPath(convertToJsonPath(lastChild.getText().replace("(", "")
-                .replace(")", "")));
-        return reExp;
+        // TODO:1 通过 查询该路径，找到引用链，构造 previousNode
+//        conNode.setPath(convertToJsonPath(lastChild.getText().replace("(", "")
+//                .replace(")", "")));
+
+//        ((PsiReferenceExpressionImpl) firstChild.getFirstChild()).getClassNameText()
+        return conNode;
     }
 
     private static String findJsonPath(PsiElement firstChild, PsiField field) {
-
         String canonicalText = ((PsiReferenceExpressionImpl) firstChild).getCanonicalText();
 
         if (firstChild.getReference().equals(field.getReference())) {

@@ -18,7 +18,7 @@ public class TestMethod {
     public ConditionClass result;
 
     // 返回值 列表
-    public List<ReturnExpression> returnExpressions;
+//    public List<ReturnExpression> returnExpressions;
 
 
     public boolean isStatic() {
@@ -61,11 +61,11 @@ public class TestMethod {
         this.result = result;
     }
 
-    public List<ReturnExpression> getReturnExpressions() {
-        return returnExpressions;
-    }
+//    public List<ReturnExpression> getReturnExpressions() {
+//        return returnExpressions;
+//    }
 
-    public void setReturnExpressions(List<ReturnExpression> returnExpressions) {
-        this.returnExpressions = returnExpressions;
-    }
+//    public void setReturnExpressions(List<ReturnExpression> returnExpressions) {
+//        this.returnExpressions = returnExpressions;
+//    }
 }

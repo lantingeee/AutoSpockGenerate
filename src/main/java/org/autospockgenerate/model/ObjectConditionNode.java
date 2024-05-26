@@ -8,8 +8,9 @@ public class ObjectConditionNode {
     public String className;
 
     public IElementType operateType;
+
     public String value;
-    public ObjectConditionNode lastNode;
+    public ObjectConditionNode previousNode;
 
     public String getNodeName() {
         return nodeName;
@@ -42,11 +43,12 @@ public class ObjectConditionNode {
     public void setValue(String value) {
         this.value = value;
     }
-    public ObjectConditionNode getLastNode() {
-        return lastNode;
+
+    public ObjectConditionNode getPreviousNode() {
+        return previousNode;
     }
 
-    public void setLastNode(ObjectConditionNode lastNode) {
-        this.lastNode = lastNode;
+    public void setPreviousNode(ObjectConditionNode previousNode) {
+        this.previousNode = previousNode;
     }
 }
