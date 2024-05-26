@@ -1,5 +1,6 @@
 package org.autospockgenerate.model;
 
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IElementType;
 
 public class ObjectConditionNode {
@@ -11,6 +12,8 @@ public class ObjectConditionNode {
 
     public String value;
     public ObjectConditionNode previousNode;
+
+    public PsiElement element;
 
     public String getNodeName() {
         return nodeName;
@@ -50,5 +53,13 @@ public class ObjectConditionNode {
 
     public void setPreviousNode(ObjectConditionNode previousNode) {
         this.previousNode = previousNode;
+    }
+
+    public PsiElement getElement() {
+        return element;
+    }
+
+    public void setElement(PsiElement element) {
+        this.element = element;
     }
 }

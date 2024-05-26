@@ -17,6 +17,8 @@ public class TestMethod {
 
     public ConditionClass result;
 
+    public String responseConditionsStr;
+
     // 返回值 列表
 //    public List<ReturnExpression> returnExpressions;
 
@@ -61,11 +63,11 @@ public class TestMethod {
         this.result = result;
     }
 
-//    public List<ReturnExpression> getReturnExpressions() {
-//        return returnExpressions;
-//    }
+    public String getResponseConditionsStr() {
+        return responseConditionsStr;
+    }
 
-//    public void setReturnExpressions(List<ReturnExpression> returnExpressions) {
-//        this.returnExpressions = returnExpressions;
-//    }
+    public void setResponseConditionsStr(String responseConditionsStr) {
+        this.responseConditionsStr = responseConditionsStr;
+    }
 }

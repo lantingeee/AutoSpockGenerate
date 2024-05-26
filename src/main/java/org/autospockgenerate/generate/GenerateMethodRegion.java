@@ -156,7 +156,7 @@ public class GenerateMethodRegion {
         // 根据对 返回值的 condition 去反构造返回值
         List<ObjectConditionNode> conditionNodes = buildObjectConditionNode(psiMethod, field, conditions);
 
-
+        result.responseConditionsStr = buildPrepareResponse(returnType, conditionNodes);
         return result;
     }
 
@@ -268,14 +268,54 @@ public class GenerateMethodRegion {
         PsiElement lastChild = binary.getLastChild();
         lastNode.value = lastChild.getText();
 
-        // TODO:1 通过 查询该路径，找到引用链，构造 previousNode
-        lastNode.nodeName = null;
-        lastNode.className = null;
         String path = convertToJsonPath(firstChild.getText().replace("(", "")
                 .replace(")", ""));
-        lastNode.previousNode = null;
+
+        // TODO:1 通过 查询该路径，找到引用链，构造 previousNode
+        // 如果直接为对象 引用
+        if (firstChild instanceof PsiReferenceExpression) {
+            PsiElement resolve = ((PsiReferenceExpression) firstChild).resolve();
+            String variableName = ((PsiVariable) resolve).getName();
+            lastNode.nodeName = variableName;
+            lastNode.className = ((PsiReferenceExpressionImpl) firstChild).getType().getPresentableText();
+        } else {
+            retrospectNode(lastNode);
+        }
         return lastNode;
     }
+
+    public static void retrospectNode(ObjectConditionNode lastNode) {
+        PsiElement element = lastNode.getElement();
+        while (element instanceof PsiMethodCallExpression) {
+            PsiMethodCallExpression call = (PsiMethodCallExpression) element;
+            PsiReferenceExpression methodRef = call.getMethodExpression();
+
+            String methodName = methodRef.getReferenceName();
+            PsiExpression qualifier = methodRef.getQualifierExpression();
+
+            // 如果qualifier是另一个方法调用，更新currentElement并继续遍历
+            if (qualifier instanceof PsiMethodCallExpression) {
+                element = qualifier;
+                continue;
+            }
+            // 如果是变量引用，尝试解析并记录
+            else if (qualifier instanceof PsiReferenceExpression) {
+                // 如果是变量引用
+                PsiElement resolvedVar = ((PsiReferenceExpression) qualifier).resolve();
+                if (resolvedVar instanceof PsiVariable) {
+                    String variableName = ((PsiVariable) resolvedVar).getName();
+                    System.out.println("Variable Name: " + variableName);
+                    // 这里可能是你寻找的 'a' 或 'response'
+                }
+            }
+            // 处理终止条件或异常情况
+            else {
+                break;
+            }
+        }
+    }
+
+
     public static ObjectConditionNode findReturnExpressionByCall(PsiMethodCallExpression callExpression) {
         PsiElement firstChild = callExpression.getFirstChild();
         PsiElement lastChild = callExpression.getLastChild();
