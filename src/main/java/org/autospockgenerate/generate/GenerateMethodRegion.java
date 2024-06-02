@@ -8,6 +8,7 @@ import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
+import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.java.IJavaElementType;
@@ -262,15 +263,13 @@ public class GenerateMethodRegion {
         // 二元表达式 等号
         ObjectConditionNode lastNode = new ObjectConditionNode();
         lastNode.operateType = binary.getOperationTokenType();
-
+        // TODO 可能为 左 也可能为 右
         PsiElement firstChild = binary.getFirstChild();
         // 等号右边 lastChild.text 是值， 等号左侧 firstChild 为 被判断的对象的路径
         PsiElement lastChild = binary.getLastChild();
         lastNode.value = lastChild.getText();
 
-        String path = convertToJsonPath(firstChild.getText().replace("(", "")
-                .replace(")", ""));
-
+        String path = convertToJsonPath(firstChild.getText().replace("()", ""));
         // TODO:1 通过 查询该路径，找到引用链，构造 previousNode
         // 如果直接为对象 引用
         if (firstChild instanceof PsiReferenceExpression) {
@@ -279,40 +278,61 @@ public class GenerateMethodRegion {
             lastNode.nodeName = variableName;
             lastNode.className = ((PsiReferenceExpressionImpl) firstChild).getType().getPresentableText();
         } else {
-            retrospectNode(lastNode);
+            lastNode = retrospectNode(firstChild);
         }
         return lastNode;
     }
 
-    public static void retrospectNode(ObjectConditionNode lastNode) {
-        PsiElement element = lastNode.getElement();
-        while (element instanceof PsiMethodCallExpression) {
+    public static ObjectConditionNode retrospectNode(PsiElement element) {
+
+        // 如果是个方法调用, 此方法层无需内探，内层需要继续追溯
+        if (element instanceof PsiMethodCallExpression) {
             PsiMethodCallExpression call = (PsiMethodCallExpression) element;
             PsiReferenceExpression methodRef = call.getMethodExpression();
+            PsiExpression tempElem = methodRef.getQualifierExpression();
+            ObjectConditionNode lastNode = new ObjectConditionNode();
 
-            String methodName = methodRef.getReferenceName();
-            PsiExpression qualifier = methodRef.getQualifierExpression();
+            while (tempElem instanceof PsiMethodCallExpression) {
+                ObjectConditionNode tempNode = new ObjectConditionNode();
 
-            // 如果qualifier是另一个方法调用，更新currentElement并继续遍历
-            if (qualifier instanceof PsiMethodCallExpression) {
-                element = qualifier;
-                continue;
-            }
-            // 如果是变量引用，尝试解析并记录
-            else if (qualifier instanceof PsiReferenceExpression) {
-                // 如果是变量引用
-                PsiElement resolvedVar = ((PsiReferenceExpression) qualifier).resolve();
-                if (resolvedVar instanceof PsiVariable) {
-                    String variableName = ((PsiVariable) resolvedVar).getName();
-                    System.out.println("Variable Name: " + variableName);
-                    // 这里可能是你寻找的 'a' 或 'response'
+                call = (PsiMethodCallExpression) tempElem;
+                methodRef = call.getMethodExpression();
+                tempElem = methodRef.getQualifierExpression();
+
+                // 如果qualifier是另一个方法调用，更新currentElement并继续遍历
+                if (tempElem instanceof PsiMethodCallExpression) {
+                    tempNode.className = tempElem.getText();
+                    tempNode.element = tempElem;
+                    String[] split = call.getText().split("\\.");
+                    tempNode.nodeName = split[split.length - 1];
+
+                    lastNode.setPreviousNode(tempNode);// TODO fix
+                    // 继续递归
+                    call = (PsiMethodCallExpression) tempElem;
+                    methodRef = call.getMethodExpression();
+                    tempElem = methodRef.getQualifierExpression();
+                } else if (tempElem instanceof PsiReferenceExpression) {
+                    // 如果是变量引用
+                    PsiElement resolvedVar = ((PsiReferenceExpression) tempElem).resolve();
+                    if (resolvedVar instanceof PsiVariable) {
+                        String variableName = ((PsiVariable) resolvedVar).getName();
+                        tempNode.className = tempElem.getText();
+                        tempNode.element = tempElem;
+                        tempNode.nodeName = variableName;
+
+                        // 找到最内层 断开
+                        break;
+                    }
+                } else {
+                    break;
                 }
             }
-            // 处理终止条件或异常情况
-            else {
-                break;
-            }
+            return lastNode;
+        } else if (element instanceof PsiReferenceExpression) {
+            System.out.println(element.getText() + " has retrospected");
+            return null;
         }
+        return null;
     }
 
 
@@ -326,12 +346,16 @@ public class GenerateMethodRegion {
             conNode.operateType = JavaTokenType.EQEQ;
             conNode.value = "null";
             conNode.className = "java.util.ArrayList";
-        }
-        // TODO:1 通过 查询该路径，找到引用链，构造 previousNode
-//        conNode.setPath(convertToJsonPath(lastChild.getText().replace("(", "")
-//                .replace(")", "")));
+            conNode.element = callExpression;
+            String[] split = callExpression.getText().split("\\.");
+            conNode.nodeName = split[split.length - 1];
 
-//        ((PsiReferenceExpressionImpl) firstChild.getFirstChild()).getClassNameText()
+            if (lastChild.getFirstChild() != null && lastChild.getFirstChild().getText().equals("(")
+                    && lastChild.getLastChild() != null && lastChild.getLastChild().getText().equalsIgnoreCase(")")) {
+                PsiElement nextSibling = lastChild.getFirstChild().getNextSibling();
+                conNode = retrospectNode(nextSibling);
+            }
+        }
         return conNode;
     }
 
