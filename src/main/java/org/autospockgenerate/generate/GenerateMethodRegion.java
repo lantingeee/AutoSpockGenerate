@@ -20,7 +20,6 @@ import org.autospockgenerate.collector.ConditionCollector;
 import org.autospockgenerate.model.*;
 import org.autospockgenerate.util.ClassNameUtil;
 import org.autospockgenerate.util.FiledNameUtil;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -99,6 +98,7 @@ public class GenerateMethodRegion {
         }
         return testMethods;
     }
+
     public static List<TestMethod> findFieldUsage(PsiMethod oriMethod, PsiField field) {
         ArrayList<TestMethod> testMethods = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的方法
@@ -154,46 +154,63 @@ public class GenerateMethodRegion {
         PsiType returnType = psiMethod.getReturnType();
         result.result = GenerateFiledMockRegion.buildConditionClassByType(returnType, field);
 
-        // 根据对 返回值的 condition 去反构造返回值
+        // 根据对 返回值的 condition 去反构造 mock 方法的返回值
         List<ObjectConditionNode> conditionNodes = buildObjectConditionNode(psiMethod, field, conditions);
-
-        result.responseConditionsStr = buildPrepareResponse(returnType, conditionNodes);
+        result.mockedResponse = buildPrepareResponse(returnType, conditionNodes);
         return result;
     }
 
-    public static String buildPrepareResponse(PsiType oriType, List<ObjectConditionNode> nodes) {
+    public static MockedResponse buildPrepareResponse(PsiType oriType, List<ObjectConditionNode> nodes) {
+        MockedResponse response = new MockedResponse();
+
         String presentText = oriType.getPresentableText();
         String className = ClassNameUtil.getClassName(presentText);
 
         StringBuilder initResp = new StringBuilder();
+        List<String> declareStatements = Lists.newArrayList();
         for (ObjectConditionNode lastNode : nodes) {
             ObjectConditionNode temp = lastNode;
-            ObjectConditionNode tempNext = null;
-            while (true) {
-                int index = 1;
-                if (temp == null) {
-                    break;
-                }
-                StringBuilder var1 = initResp.append(className).append(" ").append(temp.getNodeName()).append(index);
-                StringBuilder var2 = initResp.append(className).append(" resp").append(index);
-                // 初始化当前 node 的声明语句
-                if (temp.getOperateType() == JavaTokenType.EQEQ) {
-                    var1.append(" = ").append("new ").append(className).append("();\n");
-                    index++;
-                    var2.append(" = ").append("null;\n");
-                    index++;
-                }
-                // 有子节点
-                if (tempNext != null) {
-                    // TODO: fix First
-                    var1.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("1").append(")\n");
-                    var2.append("set").append(tempNext.getNodeName()).append("(").append(tempNext.getNodeName()).append("2").append(")\n");
-                }
-                tempNext = temp;
-                temp = temp.getPreviousNode();
+            int index = 1;
+            if (temp == null) {
+                break;
             }
+            String varParam1 = temp.getNodeName() + index++;
+            String varParam2 = temp.getNodeName() + index++;
+
+            // 初始化当前 node 的声明语句
+            if (temp.getOperateType() == JavaTokenType.EQEQ) {
+                StringBuilder var1 = new StringBuilder(className).append(" ").append(varParam1);
+                StringBuilder var2 = new StringBuilder(className).append(" ").append(varParam2);
+
+                var1.append(" = ").append("new ").append(className).append("();\n");
+                var2.append(" = ").append(temp.getValue()).append(";\n");
+                initResp.append(var1);
+                initResp.append(var2);
+            }
+
+            ObjectConditionNode tempPrevious = temp.getPreviousNode();
+            while (tempPrevious != null) {
+                // 有父节点
+                String previous1 = tempPrevious.getNodeName() + 1;
+                String previous2 = tempPrevious.getNodeName() + 2;
+                StringBuilder var1 = new StringBuilder(tempPrevious.getClassName()).append(" ").append(previous1);
+                StringBuilder var2 = new StringBuilder(tempPrevious.getClassName()).append(" ").append(previous2);
+
+                var1.append(" = ").append("new ").append(tempPrevious.getClassName()).append("();\n");
+                var2.append(" = ").append("new ").append(tempPrevious.getClassName()).append("();\n");
+                initResp.append(var1);
+                initResp.append(var2);
+
+                initResp.append(previous1).append(".set").append(temp.getNodeName()).append("(").append(varParam1).append(");\n");
+                initResp.append(previous2).append(".set").append(temp.getNodeName()).append("(").append(varParam2).append(");\n");
+                tempPrevious = tempPrevious.getPreviousNode();
+            }
+            declareStatements.add(varParam1);
+            declareStatements.add(varParam2);
         }
-        return initResp.toString();
+        response.responseConditionsStr = initResp.toString();
+        response.declareStatements = declareStatements;
+        return response;
     }
 
 
@@ -210,6 +227,7 @@ public class GenerateMethodRegion {
         sourceClass.psiField = field;
         return sourceClass;
     }
+
     public static TestMethod buildInvokeTestMethod(PsiFile psiFile, PsiMethod psiMethod) {
 
         TestMethod result = new TestMethod();
@@ -248,7 +266,7 @@ public class GenerateMethodRegion {
             PsiElement[] children = condition.getChildren();
             for (PsiElement child : children) {
                 if (child instanceof PsiBinaryExpression binary) {
-                    // 构造 一个链表，并将尾节点添加到 conditionNodeList 中
+                    // 构造 一个链表，返回值 Node 代表 子属性，node.previousNode 可以获取 其父对象
                     ObjectConditionNode conditionNode = findObjectConditionNode(binary);
                     conditionNodeList.add(conditionNode);
                 } else if (child instanceof PsiMethodCallExpression) {

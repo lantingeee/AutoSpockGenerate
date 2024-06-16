@@ -14,7 +14,7 @@ public class TestInfo {
     // 需要测试的方法
     public TestMethod testMethod;
 
-    // where 条件块
+    // where 条件块 TODO: 空的
     public Map<String, List<String>> varConditionMap;
 
     public List<ConditionClass> getParams() {

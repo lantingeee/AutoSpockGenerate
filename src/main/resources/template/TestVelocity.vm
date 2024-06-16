@@ -125,13 +125,16 @@ def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${te
 #end
 
 #macro(mockMethod $testMethod)
+    ${testMethod.mockedResponse.responseConditionsStr}
+
     #set($tempParam =
         "#if(!$testMethod.params)
             #foreach($tm in $testMethod.params)
             _ as $tm.name#if($foreach.hasNext),#end
             #end)
         #end")
-    ${testMethod.filed}.${testMethod.methodCall}(${tempParam}) >> ${testMethod.result.testClassMemberName}
+    ${testMethod.filed}.${testMethod.methodCall}(${tempParam}) >>
+[#foreach($statement in $testMethod.mockedResponse.declareStatements),#end]
 #end
 
 

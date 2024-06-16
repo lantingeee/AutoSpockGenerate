@@ -17,10 +17,7 @@ public class TestMethod {
 
     public ConditionClass result;
 
-    public String responseConditionsStr;
-
-    // 返回值 列表
-//    public List<ReturnExpression> returnExpressions;
+    public MockedResponse mockedResponse;
 
 
     public boolean isStatic() {
@@ -63,11 +60,11 @@ public class TestMethod {
         this.result = result;
     }
 
-    public String getResponseConditionsStr() {
-        return responseConditionsStr;
+    public MockedResponse getMockedResponse() {
+        return mockedResponse;
     }
 
-    public void setResponseConditionsStr(String responseConditionsStr) {
-        this.responseConditionsStr = responseConditionsStr;
+    public void setMockedResponse(MockedResponse mockedResponse) {
+        this.mockedResponse = mockedResponse;
     }
 }
