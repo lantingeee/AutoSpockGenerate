@@ -10,7 +10,6 @@ public class TestInfo {
 
     // 需要 mock 的方法
     public List<TestMethod> needMockTestMethods;
-
     // 需要测试的方法
     public TestMethod testMethod;
 
@@ -23,14 +22,6 @@ public class TestInfo {
         this.params = params;
     }
 
-    public List<TestMethod> getNeedMockMethods() {
-        return needMockTestMethods;
-    }
-
-    public void setNeedMockMethods(List<TestMethod> needMockTestMethods) {
-        this.needMockTestMethods = needMockTestMethods;
-    }
-
     public TestMethod getTestMethod() {
         return testMethod;
     }
@@ -39,4 +30,11 @@ public class TestInfo {
         this.testMethod = testMethod;
     }
 
+    public List<TestMethod> getNeedMockTestMethods() {
+        return needMockTestMethods;
+    }
+
+    public void setNeedMockTestMethods(List<TestMethod> needMockTestMethods) {
+        this.needMockTestMethods = needMockTestMethods;
+    }
 }

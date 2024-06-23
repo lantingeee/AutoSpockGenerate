@@ -81,7 +81,7 @@ public class GenerateMethodRegion {
      * @return 需要被mock 的方法
      */
     public static List<TestMethod> buildNeedMockedMethod(PsiMethod oriMethod, List<SourceClass> members) {
-        ArrayList<TestMethod> needMockedMethod = Lists.newArrayList();
+        List<TestMethod> needMockedMethod = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的所有方法
         for (SourceClass member : members) {
             List<TestMethod> fieldUsage = findFieldUsage(oriMethod, member.psiField);
@@ -121,7 +121,7 @@ public class GenerateMethodRegion {
                 List<PsiIfStatement> conditions = ConditionCollector.
                         collectConditionsFromBody(call, oriMethod.getBody(), Lists.newArrayList());
                 System.out.println("find mockMethod -------" + resolvedMethod.getName());
-                needMockedMethod.add(buildNeedMockedMethod(oriMethod, field, conditions));
+                needMockedMethod.add(buildNeedMockedMethod(resolvedMethod, field, conditions));
             }
         }
         return needMockedMethod;
