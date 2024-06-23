@@ -10,4 +10,19 @@ public class MockedResponse {
     // 返回的 mock 列表
     public String responseConditionsStr;
 
+    public List<String> getDeclareStatements() {
+        return declareStatements;
+    }
+
+    public void setDeclareStatements(List<String> declareStatements) {
+        this.declareStatements = declareStatements;
+    }
+
+    public String getResponseConditionsStr() {
+        return responseConditionsStr;
+    }
+
+    public void setResponseConditionsStr(String responseConditionsStr) {
+        this.responseConditionsStr = responseConditionsStr;
+    }
 }

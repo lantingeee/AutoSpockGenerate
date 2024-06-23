@@ -14,8 +14,6 @@ public class TestInfo {
     // 需要测试的方法
     public TestMethod testMethod;
 
-    // where 条件块 TODO: 空的
-    public Map<String, List<String>> varConditionMap;
 
     public List<ConditionClass> getParams() {
         return params;
@@ -41,11 +39,4 @@ public class TestInfo {
         this.testMethod = testMethod;
     }
 
-    public Map<String, List<String>> getVarConditionMap() {
-        return varConditionMap;
-    }
-
-    public void setVarConditionMap(Map<String, List<String>> varConditionMap) {
-        this.varConditionMap = varConditionMap;
-    }
 }

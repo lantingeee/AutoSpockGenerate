@@ -19,7 +19,6 @@ public class TestMethod {
 
     public MockedResponse mockedResponse;
 
-
     public boolean isStatic() {
         return isStatic;
     }

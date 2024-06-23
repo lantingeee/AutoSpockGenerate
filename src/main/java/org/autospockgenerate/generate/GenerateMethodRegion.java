@@ -1,19 +1,11 @@
 package org.autospockgenerate.generate;
 
-import com.fasterxml.jackson.jr.ob.JSON;
-import com.google.gson.Gson;
-import com.google.gson.JsonParser;
-import com.intellij.json.JsonUtil;
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
-import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
-import com.intellij.psi.tree.IElementType;
-import com.intellij.psi.tree.java.IJavaElementType;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.intellij.util.io.jackson.JacksonUtil;
 import groovy.util.logging.Slf4j;
 import org.apache.commons.compress.utils.Lists;
 import org.autospockgenerate.collector.ConditionCollector;
@@ -44,9 +36,8 @@ public class GenerateMethodRegion {
             // 2.对 Mock返回值 做条件语句，需要解析 mock 的方法返回值有哪些条件引用，然后生成对应的条件语句
             // 3.对 方法返回值 做条件语句
             // service.metaClass.retrieveData = { -> "mocked data" } )
-            testInfo.needMockTestMethods = buildNeedMockMethod(method, members);
+            testInfo.needMockTestMethods = buildNeedMockedMethod(method, members);
             testInfo.testMethod = buildInvokeTestMethod(psiFile, method);
-            testInfo.varConditionMap = new HashMap<>();
             testInfos.add(testInfo);
         }
         return testInfos;
@@ -89,24 +80,24 @@ public class GenerateMethodRegion {
      * @param members   成员变量列表
      * @return 需要被mock 的方法
      */
-    public static List<TestMethod> buildNeedMockMethod(PsiMethod oriMethod, List<SourceClass> members) {
-        ArrayList<TestMethod> testMethods = Lists.newArrayList();
+    public static List<TestMethod> buildNeedMockedMethod(PsiMethod oriMethod, List<SourceClass> members) {
+        ArrayList<TestMethod> needMockedMethod = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的所有方法
         for (SourceClass member : members) {
             List<TestMethod> fieldUsage = findFieldUsage(oriMethod, member.psiField);
-            testMethods.addAll(fieldUsage);
+            needMockedMethod.addAll(fieldUsage);
         }
-        return testMethods;
+        return needMockedMethod;
     }
 
     public static List<TestMethod> findFieldUsage(PsiMethod oriMethod, PsiField field) {
-        ArrayList<TestMethod> testMethods = Lists.newArrayList();
+        ArrayList<TestMethod> needMockedMethod = Lists.newArrayList();
         // 获取 oriMethod 方法内部  使用全局变量的方法
         // 假设 youField 是我们想要查找引用的成员变量 PsiField 对象
         // 遍历方法体内的所有表达式，查找方法调用
         PsiCodeBlock body = oriMethod.getBody();
         if (body == null) {
-            return testMethods;
+            return needMockedMethod;
         }
         for (PsiStatement statement : body.getStatements()) {
             // 搜索方法调用
@@ -130,13 +121,13 @@ public class GenerateMethodRegion {
                 List<PsiIfStatement> conditions = ConditionCollector.
                         collectConditionsFromBody(call, oriMethod.getBody(), Lists.newArrayList());
                 System.out.println("find mockMethod -------" + resolvedMethod.getName());
-                testMethods.add(buildNeedMockMethod(oriMethod, field, conditions));
+                needMockedMethod.add(buildNeedMockedMethod(oriMethod, field, conditions));
             }
         }
-        return testMethods;
+        return needMockedMethod;
     }
 
-    public static TestMethod buildNeedMockMethod(PsiMethod psiMethod, PsiField field, List<PsiIfStatement> conditions) {
+    public static TestMethod buildNeedMockedMethod(PsiMethod psiMethod, PsiField field, List<PsiIfStatement> conditions) {
         TestMethod result = new TestMethod();
         result.isStatic = true;
         result.filed = field.getName();
