@@ -85,10 +85,11 @@ void test${StringUtils.capitalize(${testInfo.testMethod.methodCall})}() {
 given:
     ## Construct the source class if needed.
     #initParams(${testInfo.params})
-    #mockMethodPart($testInfo.needMockTestMethods)
-
 // Run the test
-    #if($testInfo.needMockTestMethods) then: #else expect: #end
+    #if($testInfo.needMockTestMethods)
+    when:
+        #mockMethodPart($testInfo.needMockTestMethods)
+    then: #else expect: #end
     #set($tempParam ="#if($testInfo.params) #combineParams($testInfo.params) #end")
 
 def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${tempParam})
@@ -108,8 +109,6 @@ def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${te
         #generateTestMethod($testMethod)
     #end
 #end
-
-
 
 ##TODO 1.将 会变化的 code 收集
 #macro(initParams $params)

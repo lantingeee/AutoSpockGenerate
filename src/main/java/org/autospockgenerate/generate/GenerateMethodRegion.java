@@ -35,7 +35,7 @@ public class GenerateMethodRegion {
             // 1.对 入参 做条件语句，可以通过 多个 Test 方法，每个方法的入参不同来实现
             // 2.对 Mock返回值 做条件语句，需要解析 mock 的方法返回值有哪些条件引用，然后生成对应的条件语句
             // 3.对 方法返回值 做条件语句
-            // service.metaClass.retrieveData = { -> "mocked data" } )
+            // service.metaClass.retrieveData = { -> "mocked data" }
             testInfo.needMockTestMethods = buildNeedMockedMethod(method, members);
             testInfo.testMethod = buildInvokeTestMethod(psiFile, method);
             testInfos.add(testInfo);
