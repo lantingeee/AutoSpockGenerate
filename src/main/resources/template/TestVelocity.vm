@@ -86,7 +86,7 @@ given:
     ## Construct the source class if needed.
     #initParams(${testInfo.params})
 // Run the test
-    #if($testInfo.needMockTestMethods)
+    #if(!$testInfo.needMockTestMethods.empty)
     when:
         #mockMethodPart($testInfo.needMockTestMethods)
     then: #else expect: #end
@@ -130,11 +130,8 @@ def result = ${testInfo.testMethod.filed}.${testInfo.testMethod.methodCall}(${te
 #end
 
 #macro(mockMethodPart $params)
-    #if(!$params.empty)
-    when:
-        #foreach($mockedMethod in $params)
-            #mockMethod($mockedMethod)
-        #end
+    #foreach($mockedMethod in $params)
+        #mockMethod($mockedMethod)
     #end
 #end
 

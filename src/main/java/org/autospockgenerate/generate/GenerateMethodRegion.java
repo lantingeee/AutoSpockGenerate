@@ -162,7 +162,8 @@ public class GenerateMethodRegion {
         for (ObjectConditionNode lastNode : nodes) {
             ObjectConditionNode temp = lastNode;
             int index = 1;
-            if (temp == null) {
+            if (temp == null || temp.getNodeName() == null) {
+                // mock 的对象为空的情况 跳出
                 break;
             }
             String varParam1 = temp.getNodeName() + index++;
