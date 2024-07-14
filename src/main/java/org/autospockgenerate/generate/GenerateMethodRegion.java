@@ -174,7 +174,7 @@ public class GenerateMethodRegion {
                 StringBuilder var1 = new StringBuilder(className).append(" ").append(varParam1);
                 StringBuilder var2 = new StringBuilder(className).append(" ").append(varParam2);
 
-                var1.append(" = ").append("new ").append(className).append("();\n");
+                var1.append(" = ").append(initClassStatement(className)).append("\n");
                 var2.append(" = ").append(temp.getValue()).append(";\n");
                 initResp.append(var1);
                 initResp.append(var2);
@@ -188,8 +188,8 @@ public class GenerateMethodRegion {
                 StringBuilder var1 = new StringBuilder(tempPrevious.getClassName()).append(" ").append(previous1);
                 StringBuilder var2 = new StringBuilder(tempPrevious.getClassName()).append(" ").append(previous2);
 
-                var1.append(" = ").append("new ").append(tempPrevious.getClassName()).append("();\n");
-                var2.append(" = ").append("new ").append(tempPrevious.getClassName()).append("();\n");
+                var1.append(" = ").append(initClassStatement(tempPrevious.getClassName())).append("\n");
+                var2.append(" = ").append(initClassStatement(tempPrevious.getClassName())).append("\n");
                 initResp.append(var1);
                 initResp.append(var2);
 
@@ -205,6 +205,16 @@ public class GenerateMethodRegion {
         return response;
     }
 
+    public static String initClassStatement(String className) {
+        if ("Long".equals(className) || "long".equals(className)) {
+            return "123L";
+        } else if ("Integer".equals(className) || "int".equals(className)) {
+            return "123";
+        } else if ("Boolean".equals(className) || "bool".equals(className)) {
+            return "true";
+        }
+        return "new " + className + "();";
+    }
 
     public static ConditionClass buildConditionClassByType1(PsiType oriType, PsiField field) {
         String presentText = oriType.getPresentableText();
