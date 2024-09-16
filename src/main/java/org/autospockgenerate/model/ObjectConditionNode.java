@@ -8,7 +8,7 @@ public class ObjectConditionNode {
 
     public String className;
 
-    public IElementType operateType;
+    public String operateType;
 
     public String value;
     public ObjectConditionNode previousNode;
@@ -31,11 +31,11 @@ public class ObjectConditionNode {
         this.className = className;
     }
 
-    public IElementType getOperateType() {
+    public String getOperateType() {
         return operateType;
     }
 
-    public void setOperateType(IElementType operateType) {
+    public void setOperateType(String operateType) {
         this.operateType = operateType;
     }
 

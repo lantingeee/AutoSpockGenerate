@@ -1,17 +1,23 @@
 package org.autospockgenerate.generate;
 
+import com.ibm.icu.impl.Pair;
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.compiled.ClsClassImpl;
+import com.intellij.psi.impl.compiled.ClsTypeElementImpl;
 import com.intellij.psi.impl.source.PsiParameterImpl;
+import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
+import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
 import com.intellij.psi.impl.source.tree.java.PsiReferenceExpressionImpl;
 import com.intellij.psi.util.PsiTreeUtil;
 import groovy.util.logging.Slf4j;
 import org.apache.commons.compress.utils.Lists;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.autospockgenerate.collector.ConditionCollector;
 import org.autospockgenerate.model.*;
 import org.autospockgenerate.util.ClassNameUtil;
 import org.autospockgenerate.util.FiledNameUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -153,56 +159,53 @@ public class GenerateMethodRegion {
 
     public static MockedResponse buildPrepareResponse(PsiType oriType, List<ObjectConditionNode> nodes) {
         MockedResponse response = new MockedResponse();
-
-        String presentText = oriType.getPresentableText();
-        String className = ClassNameUtil.getClassName(presentText);
-
         StringBuilder initResp = new StringBuilder();
         List<String> declareStatements = Lists.newArrayList();
+        Map<String, Integer> indexMap = new HashMap<>();
         for (ObjectConditionNode lastNode : nodes) {
+            // TODO: 判断 nodes 里是否使用到了 oriType
             ObjectConditionNode temp = lastNode;
-            int index = 1;
             if (temp == null || temp.getNodeName() == null) {
                 // mock 的对象为空的情况 跳出
                 break;
             }
-            String varParam1 = temp.getNodeName() + index++;
-            String varParam2 = temp.getNodeName() + index++;
-
-            // 初始化当前 node 的声明语句
-            if (temp.getOperateType() == JavaTokenType.EQEQ) {
-                StringBuilder var1 = new StringBuilder(className).append(" ").append(varParam1);
-                StringBuilder var2 = new StringBuilder(className).append(" ").append(varParam2);
-
-                var1.append(" = ").append(initClassStatement(className)).append("\n");
-                var2.append(" = ").append(temp.getValue()).append(";\n");
-                initResp.append(var1);
-                initResp.append(var2);
-            }
-
+            ImmutablePair<String, String> curName = filledStatementFromNode(temp, initResp, oriType, indexMap, declareStatements);
             ObjectConditionNode tempPrevious = temp.getPreviousNode();
             while (tempPrevious != null) {
                 // 有父节点
-                String previous1 = tempPrevious.getNodeName() + 1;
-                String previous2 = tempPrevious.getNodeName() + 2;
-                StringBuilder var1 = new StringBuilder(tempPrevious.getClassName()).append(" ").append(previous1);
-                StringBuilder var2 = new StringBuilder(tempPrevious.getClassName()).append(" ").append(previous2);
-
-                var1.append(" = ").append(initClassStatement(tempPrevious.getClassName())).append("\n");
-                var2.append(" = ").append(initClassStatement(tempPrevious.getClassName())).append("\n");
-                initResp.append(var1);
-                initResp.append(var2);
-
-                initResp.append(previous1).append(".set").append(temp.getNodeName()).append("(").append(varParam1).append(");\n");
-                initResp.append(previous2).append(".set").append(temp.getNodeName()).append("(").append(varParam2).append(");\n");
+                ImmutablePair<String, String> names = filledStatementFromNode(tempPrevious, initResp, oriType, indexMap, declareStatements);
+                initResp.append(names.left).append(".set").append(temp.getNodeName()).append("(").append(curName.left).append(");\n");
+                initResp.append(names.right).append(".set").append(temp.getNodeName()).append("(").append(curName.right).append(");\n");
                 tempPrevious = tempPrevious.getPreviousNode();
             }
-            declareStatements.add(varParam1);
-            declareStatements.add(varParam2);
         }
         response.responseConditionsStr = initResp.toString();
         response.declareStatements = declareStatements;
         return response;
+    }
+
+    public static ImmutablePair<String, String> filledStatementFromNode(ObjectConditionNode currentNode,
+                                                                        StringBuilder initResp, PsiType oriType,
+                                                                        Map<String, Integer> indexMap,
+                                                                        List<String> declareStatements) {
+        int tIndex = Optional.ofNullable(indexMap.get(currentNode.getNodeName())).orElse(1);
+        String previous1 = currentNode.getNodeName() + tIndex++;
+        String previous2 = currentNode.getNodeName() + tIndex++;
+        indexMap.put(currentNode.getNodeName(), tIndex);
+        if (oriType.getPresentableText().equals(currentNode.getClassName())) {
+            declareStatements.add(previous1);
+            declareStatements.add(previous2);
+        }
+        // 初始化当前 node 的声明语句
+        if (currentNode.getOperateType().equals(JavaTokenType.EQEQ.toString())) {
+            StringBuilder var1 = new StringBuilder(currentNode.getClassName()).append(" ").append(previous1);
+            StringBuilder var2 = new StringBuilder(currentNode.getClassName()).append(" ").append(previous2);
+            var1.append(" = ").append(initClassStatement(currentNode.getClassName())).append("\n");
+            var2.append(" = ").append(initClassStatement(currentNode.getClassName())).append("\n");
+            initResp.append(var1);
+            initResp.append(var2);
+        }
+        return new ImmutablePair<>(previous1, previous2);
     }
 
     public static String initClassStatement(String className) {
@@ -282,7 +285,7 @@ public class GenerateMethodRegion {
     public static ObjectConditionNode findObjectConditionNode(PsiBinaryExpression binary) {
         // 二元表达式 等号
         ObjectConditionNode lastNode = new ObjectConditionNode();
-        lastNode.operateType = binary.getOperationTokenType();
+        lastNode.operateType = binary.getOperationTokenType().toString();
         // TODO 可能为 左 也可能为 右
         PsiElement firstChild = binary.getFirstChild();
         // 等号右边 lastChild.text 是值， 等号左侧 firstChild 为 被判断的对象的路径
@@ -298,63 +301,105 @@ public class GenerateMethodRegion {
             lastNode.nodeName = variableName;
             lastNode.className = ((PsiReferenceExpressionImpl) firstChild).getType().getPresentableText();
         } else {
-            lastNode = retrospectNode(firstChild);
+            lastNode = retrospectMethodNode(firstChild);
         }
         return lastNode;
     }
 
-    public static ObjectConditionNode retrospectNode(PsiElement element) {
-
+    public static ObjectConditionNode retrospectMethodNode(PsiElement element) {
+        if (element == null) {
+            return null;
+        }
         // 如果是个方法调用, 此方法层无需内探，内层需要继续追溯
+        ObjectConditionNode chainNode = new ObjectConditionNode();
         if (element instanceof PsiMethodCallExpression) {
-            PsiMethodCallExpression call = (PsiMethodCallExpression) element;
-            PsiReferenceExpression methodRef = call.getMethodExpression();
-            PsiExpression tempElem = methodRef.getQualifierExpression();
-            ObjectConditionNode lastNode = new ObjectConditionNode();
-
-            while (tempElem instanceof PsiMethodCallExpression) {
-                ObjectConditionNode tempNode = new ObjectConditionNode();
-
-                call = (PsiMethodCallExpression) tempElem;
-                methodRef = call.getMethodExpression();
-                tempElem = methodRef.getQualifierExpression();
-
-                // 如果qualifier是另一个方法调用，更新currentElement并继续遍历
-                if (tempElem instanceof PsiMethodCallExpression) {
-                    tempNode.className = tempElem.getText();
-                    tempNode.element = tempElem;
-                    String[] split = call.getText().split("\\.");
-                    tempNode.nodeName = split[split.length - 1];
-
-                    lastNode.setPreviousNode(tempNode);// TODO fix
-                    // 继续递归
-                    call = (PsiMethodCallExpression) tempElem;
-                    methodRef = call.getMethodExpression();
-                    tempElem = methodRef.getQualifierExpression();
-                } else if (tempElem instanceof PsiReferenceExpression) {
-                    // 如果是变量引用
-                    PsiElement resolvedVar = ((PsiReferenceExpression) tempElem).resolve();
-                    if (resolvedVar instanceof PsiVariable) {
-                        String variableName = ((PsiVariable) resolvedVar).getName();
-                        tempNode.className = tempElem.getText();
-                        tempNode.element = tempElem;
-                        tempNode.nodeName = variableName;
-
-                        // 找到最内层 断开
-                        break;
-                    }
-                } else {
-                    break;
+            PsiElement[] cElements = element.getChildren()[0].getChildren();
+            for (PsiElement cElement : cElements) {
+                if (cElement instanceof PsiIdentifierImpl) {
+                    chainNode.nodeName = cElement.getText().replace("get", "");
                 }
             }
-            return lastNode;
-        } else if (element instanceof PsiReferenceExpression) {
-            System.out.println(element.getText() + " has retrospected");
-            return null;
+            chainNode.className = ((PsiMethodCallExpressionImpl) element).getType().getPresentableText();
+            chainNode.operateType = JavaTokenType.EQEQ.toString();
+//            chainNode.value = "null";
+            chainNode.element = element;
+
+            PsiMethodCallExpression elemExp = (PsiMethodCallExpression) element;
+            // 获取"C()"的限定符"B"
+            PsiReferenceExpression qualifier = (PsiReferenceExpression) elemExp.getMethodExpression().getQualifierExpression();
+            ObjectConditionNode nextNode = null;
+            if (qualifier instanceof PsiMethodCallExpression) {
+                // 例如 A.getB().getC();  获取"C()"的限定符"B" , 从"B"回溯到对应的PsiMethodCallExpression
+                PsiMethodCallExpression enclosingCall = getEnclosingMethodCallExpression(qualifier);
+                nextNode = retrospectMethodNode(enclosingCall);
+            } else if (qualifier instanceof PsiReferenceExpression) {
+                // 如果限定符是变量引用，解析其引用
+                nextNode = retrospectMethodNode(qualifier);
+            }
+            chainNode.setPreviousNode(nextNode);
+            return chainNode;
+        } else if (element instanceof PsiReferenceExpression qualifier) {
+            // 以 A.getB().getC() 为例，这里是追溯到 A 对象了
+            chainNode.className = qualifier.getType().getPresentableText();
+            chainNode.operateType = JavaTokenType.EQEQ.toString();
+            chainNode.value = "null";
+            chainNode.element = element;
+            chainNode.nodeName = element.getText().replace("get", "");
+        }
+        return chainNode;
+    }
+
+    private static boolean isListReturnType(PsiMethodCallExpression element) {
+        PsiType returnType = getReturnType(element);
+        if (returnType != null) {
+            return returnType.equalsToText("java.util.List") || returnType.equalsToText("List");
+        }
+        return false;
+    }
+    private static PsiClassType getListType(PsiMethodCallExpression element) {
+        PsiType returnType = getReturnType(element);
+        if (returnType instanceof PsiClassType) {
+            PsiClassType.ClassResolveResult result = ((PsiClassType)returnType).resolveGenerics();
+            PsiClass clazz = result.getElement();
+            if (clazz != null && clazz.getName().equals("List")) {
+                return (PsiClassType) returnType;
+            }
         }
         return null;
     }
 
+
+    private static PsiType getReturnType(PsiMethodCallExpression element) {
+        PsiMethod method = element.resolveMethod();
+        if (method != null) {
+            return method.getReturnType();
+        }
+        return null;
+    }
+
+    private static PsiClass getClassFromType(PsiType type) {
+        if (type instanceof PsiClassType) {
+            PsiClassType.ClassResolveResult result = ((PsiClassType) type).resolveGenerics();
+            PsiClass clazz = result.getElement();
+            if (clazz != null) {
+                return clazz;
+            }
+        }
+        return null;
+    }
+
+    public static PsiMethodCallExpression getEnclosingMethodCallExpression(PsiReferenceExpression referenceExpression) {
+
+        PsiElement parent = referenceExpression.getParent();
+
+        while (parent != null && !(parent instanceof PsiMethodCallExpression)) {
+            parent = parent.getParent();
+        }
+        if (parent instanceof PsiMethodCallExpression) {
+            return (PsiMethodCallExpression) parent;
+        }
+        return null;
+    }
 
     public static ObjectConditionNode findReturnExpressionByCall(PsiMethodCallExpression callExpression) {
         PsiElement firstChild = callExpression.getFirstChild();
@@ -363,7 +408,7 @@ public class GenerateMethodRegion {
         ObjectConditionNode conNode = new ObjectConditionNode();
 
         if ("CollectionUtils.isEmpty".equalsIgnoreCase(methodName)) {
-            conNode.operateType = JavaTokenType.EQEQ;
+            conNode.operateType = JavaTokenType.EQEQ.toString();
             conNode.value = "null";
             conNode.className = "java.util.ArrayList";
             conNode.element = callExpression;
@@ -373,7 +418,7 @@ public class GenerateMethodRegion {
             if (lastChild.getFirstChild() != null && lastChild.getFirstChild().getText().equals("(")
                     && lastChild.getLastChild() != null && lastChild.getLastChild().getText().equalsIgnoreCase(")")) {
                 PsiElement nextSibling = lastChild.getFirstChild().getNextSibling();
-                conNode = retrospectNode(nextSibling);
+                conNode = retrospectMethodNode(nextSibling);
             }
         }
         return conNode;
