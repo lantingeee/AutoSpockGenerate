@@ -5,6 +5,7 @@ import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.compiled.ClsClassImpl;
 import com.intellij.psi.impl.compiled.ClsTypeElementImpl;
+import com.intellij.psi.impl.source.PsiClassReferenceType;
 import com.intellij.psi.impl.source.PsiParameterImpl;
 import com.intellij.psi.impl.source.tree.java.PsiIdentifierImpl;
 import com.intellij.psi.impl.source.tree.java.PsiMethodCallExpressionImpl;
@@ -196,14 +197,33 @@ public class GenerateMethodRegion {
             declareStatements.add(previous1);
             declareStatements.add(previous2);
         }
+
+        StringBuilder var1 = new StringBuilder(currentNode.getClassName()).append(" ").append(previous1);
+        StringBuilder var2 = new StringBuilder(currentNode.getClassName()).append(" ").append(previous2);
+        var1.append(" = ").append(initClassStatement(currentNode.getClassName())).append("\n");
+        var2.append(" = ").append(initClassStatement(currentNode.getClassName())).append("\n");
         // 初始化当前 node 的声明语句
         if (currentNode.getOperateType().equals(JavaTokenType.EQEQ.toString())) {
-            StringBuilder var1 = new StringBuilder(currentNode.getClassName()).append(" ").append(previous1);
-            StringBuilder var2 = new StringBuilder(currentNode.getClassName()).append(" ").append(previous2);
-            var1.append(" = ").append(initClassStatement(currentNode.getClassName())).append("\n");
-            var2.append(" = ").append(initClassStatement(currentNode.getClassName())).append("\n");
+
             initResp.append(var1);
             initResp.append(var2);
+        } else if (currentNode.getOperateType().equals("EMPTY")) {
+
+            initResp.append(var1);
+            initResp.append(var2);
+
+            PsiElement element = currentNode.getElement();
+            PsiType returnType = getReturnType((PsiMethodCallExpression) element);
+            PsiType[] parameters = ((PsiClassType) returnType).getParameters();
+            String presentableText = parameters[0].getPresentableText();
+
+            StringBuilder iElem = new StringBuilder(presentableText).append(" e").append(presentableText).append(1);
+            String elemName = iElem.toString();
+            indexMap.put(returnType.getPresentableText(), 1);
+
+            iElem.append(" = ").append(initClassStatement(presentableText)).append("\n");
+            initResp.append(iElem);
+            initResp.append(previous2).append(".add(").append(elemName).append(");\n");
         }
         return new ImmutablePair<>(previous1, previous2);
     }
@@ -320,7 +340,11 @@ public class GenerateMethodRegion {
                 }
             }
             chainNode.className = ((PsiMethodCallExpressionImpl) element).getType().getPresentableText();
-            chainNode.operateType = JavaTokenType.EQEQ.toString();
+            if (isListReturnType((PsiMethodCallExpression) element)) {
+                chainNode.operateType = "EMPTY";
+            } else {
+                chainNode.operateType = JavaTokenType.EQEQ.toString();
+            }
 //            chainNode.value = "null";
             chainNode.element = element;
 
@@ -352,7 +376,7 @@ public class GenerateMethodRegion {
     private static boolean isListReturnType(PsiMethodCallExpression element) {
         PsiType returnType = getReturnType(element);
         if (returnType != null) {
-            return returnType.equalsToText("java.util.List") || returnType.equalsToText("List");
+            return returnType.getPresentableText().contains("List");
         }
         return false;
     }
